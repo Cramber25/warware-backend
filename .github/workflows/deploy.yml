@@ -1,0 +1,16 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Deploy from server directory
+        run: |
+          cd ~/myapps/warware/backend
+          git pull
+          docker compose up --build -d
