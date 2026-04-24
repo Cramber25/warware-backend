@@ -47,3 +47,14 @@ cloud:
     access-key: ${R2_ACCESS_KEY}
     secret-key: ${R2_SECRET_KEY}
     bucket-name: ${R2_BUCKET_NAME}
+server:
+  forward-headers-strategy: framework
+  tomcat:
+    remote-ip-header: x-forwarded-for
+    protocol-header: x-forwarded-proto
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: false
