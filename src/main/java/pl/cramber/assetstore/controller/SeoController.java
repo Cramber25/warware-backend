@@ -47,7 +47,7 @@ public class SeoController {
             return ResponseEntity.ok(html);
         }
 
-        String title = asset.getTitle() + " | WarWare Store";
+        String title = asset.getTitle() + " | WARWARE";
         String description = cleanMarkdown(asset.getDescription());
         if (description.length() > 150) {
             description = description.substring(0, 147) + "...";
@@ -66,12 +66,15 @@ public class SeoController {
         return html
                 .replaceAll("<title>.*?</title>", "<title>" + title + "</title>")
 
-                .replaceAll("<meta property=\"og:title\" content=\".*?\">", "<meta property=\"og:title\" content=\"" + title + "\">")
-                .replaceAll("<meta property=\"og:description\" content=\".*?\">", "<meta property=\"og:description\" content=\"" + description + "\">")
-                .replaceAll("<meta property=\"og:image\" content=\".*?\">", "<meta property=\"og:image\" content=\"" + image + "\">")
+                .replaceAll("<meta\\s+name=\"title\"\\s+content=\".*?\"\\s*/?>", "<meta name=\"title\" content=\"" + title + "\" />")
+                .replaceAll("<meta\\s+name=\"description\"\\s+content=\".*?\"\\s*/?>", "<meta name=\"description\" content=\"" + description + "\" />")
 
-                .replaceAll("<meta name=\"twitter:title\" content=\".*?\">", "<meta name=\"twitter:title\" content=\"" + title + "\">")
-                .replaceAll("<meta name=\"twitter:description\" content=\".*?\">", "<meta name=\"twitter:description\" content=\"" + description + "\">")
-                .replaceAll("<meta name=\"twitter:image\" content=\".*?\">", "<meta name=\"twitter:image\" content=\"" + image + "\">");
+                .replaceAll("<meta\\s+property=\"og:title\"\\s+content=\".*?\"\\s*/?>", "<meta property=\"og:title\" content=\"" + title + "\" />")
+                .replaceAll("<meta\\s+property=\"og:description\"\\s+content=\".*?\"\\s*/?>", "<meta property=\"og:description\" content=\"" + description + "\" />")
+                .replaceAll("<meta\\s+property=\"og:image\"\\s+content=\".*?\"\\s*/?>", "<meta property=\"og:image\" content=\"" + image + "\" />")
+
+                .replaceAll("<meta\\s+property=\"twitter:title\"\\s+content=\".*?\"\\s*/?>", "<meta property=\"twitter:title\" content=\"" + title + "\" />")
+                .replaceAll("<meta\\s+property=\"twitter:description\"\\s+content=\".*?\"\\s*/?>", "<meta property=\"twitter:description\" content=\"" + description + "\" />")
+                .replaceAll("<meta\\s+property=\"twitter:image\"\\s+content=\".*?\"\\s*/?>", "<meta property=\"twitter:image\" content=\"" + image + "\" />");
     }
 }
