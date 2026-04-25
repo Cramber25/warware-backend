@@ -29,6 +29,9 @@ public class User {
     @Column(name = "discord_avatar_url", columnDefinition = "TEXT")
     private String discordAvatarUrl;
 
+    @Column(name = "email")
+    private String email;
+
     @Column(name = "roblox_id", unique = true)
     private String robloxId;
 

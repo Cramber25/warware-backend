@@ -29,6 +29,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         String discordId = oAuth2User.getAttribute("id");
         String username = oAuth2User.getAttribute("username");
         String avatarHash = oAuth2User.getAttribute("avatar");
+        String email = oAuth2User.getAttribute("email");
 
         String avatarUrl = avatarHash != null
                 ? "https://cdn.discordapp.com/avatars/" + discordId + "/" + avatarHash + ".png"
@@ -44,6 +45,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 .map(existingUser -> {
                     existingUser.setDiscordUsername(username);
                     existingUser.setDiscordAvatarUrl(avatarUrl);
+                    existingUser.setEmail(email);
                     return userRepository.save(existingUser);
                 })
                 .orElseGet(() -> {
@@ -51,6 +53,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                             .discordId(discordId)
                             .discordUsername(username)
                             .discordAvatarUrl(avatarUrl)
+                            .email(email)
                             .build();
                     return userRepository.save(newUser);
                 });
