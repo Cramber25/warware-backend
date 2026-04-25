@@ -37,6 +37,7 @@ public class AdminPromoCodeController {
                 : promoCodeRepository.findByCreatorId(admin.getId());
 
         List<PromoCodeResponse> mappedCodes = codes.stream()
+                .filter(code -> !code.isArchived())
                 .map(code -> mapToDto(code, promoCodeUsageRepository.countByPromoCodeId(code.getId())))
                 .toList();
 
@@ -59,6 +60,7 @@ public class AdminPromoCodeController {
 
         code.setPerUser(Boolean.parseBoolean(payload.get("isPerUser").toString()));
         code.setActive(true);
+        code.setArchived(false);
         code.setCreator(admin);
 
         if (payload.get("usageLimit") != null) {
@@ -87,6 +89,58 @@ public class AdminPromoCodeController {
                 .build());
 
         return ResponseEntity.ok(mapToDto(saved, 0L));
+    }
+
+    @PatchMapping("/{id}/toggle")
+    @Transactional
+    public ResponseEntity<PromoCodeResponse> togglePromoCode(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal OAuth2User principal) {
+
+        User admin = userRepository.findByDiscordId(principal.getAttribute("id")).orElseThrow();
+        PromoCode code = promoCodeRepository.findById(id).orElseThrow();
+
+        if (!"SUPERADMIN".equals(admin.getRole()) && !code.getCreator().getId().equals(admin.getId())) {
+            return ResponseEntity.status(403).build();
+        }
+
+        code.setActive(!code.isActive());
+        PromoCode saved = promoCodeRepository.save(code);
+
+        auditLogRepository.save(AuditLog.builder()
+                .adminDiscordId(admin.getDiscordId())
+                .action("TOGGLE_PROMO")
+                .details("Toggled promo code " + code.getCode())
+                .build());
+
+        long usageCount = promoCodeUsageRepository.countByPromoCodeId(code.getId());
+        return ResponseEntity.ok(mapToDto(saved, usageCount));
+    }
+
+    @DeleteMapping("/{id}")
+    @Transactional
+    public ResponseEntity<Void> deletePromoCode(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal OAuth2User principal) {
+
+        User admin = userRepository.findByDiscordId(principal.getAttribute("id")).orElseThrow();
+        PromoCode code = promoCodeRepository.findById(id).orElseThrow();
+
+        if (!"SUPERADMIN".equals(admin.getRole()) && !code.getCreator().getId().equals(admin.getId())) {
+            return ResponseEntity.status(403).build();
+        }
+
+        code.setArchived(true);
+        code.setActive(false);
+        promoCodeRepository.save(code);
+
+        auditLogRepository.save(AuditLog.builder()
+                .adminDiscordId(admin.getDiscordId())
+                .action("ARCHIVE_PROMO")
+                .details("Archived promo code: " + code.getCode())
+                .build());
+
+        return ResponseEntity.ok().build();
     }
 
     private PromoCodeResponse mapToDto(PromoCode p, long usageCount) {

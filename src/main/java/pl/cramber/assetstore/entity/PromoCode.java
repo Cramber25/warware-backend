@@ -53,6 +53,9 @@ public class PromoCode {
     @Column(name = "is_active", nullable = false)
     private boolean isActive;
 
+    @Column(name = "is_archived", nullable = false)
+    private boolean isArchived;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private ZonedDateTime createdAt;
