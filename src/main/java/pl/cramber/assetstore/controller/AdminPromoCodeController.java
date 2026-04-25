@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import pl.cramber.assetstore.entity.*;
 import pl.cramber.assetstore.repository.*;
@@ -11,6 +12,7 @@ import pl.cramber.assetstore.repository.*;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin/promocodes")
@@ -25,15 +27,21 @@ public class AdminPromoCodeController {
     private final AuditLogRepository auditLogRepository;
 
     @GetMapping
-    public List<PromoCode> getPromoCodes(@AuthenticationPrincipal OAuth2User principal) {
+    @Transactional(readOnly = true)
+    public ResponseEntity<?> getPromoCodes(@AuthenticationPrincipal OAuth2User principal) {
         User admin = userRepository.findByDiscordId(principal.getAttribute("id")).orElseThrow();
-        if ("SUPERADMIN".equals(admin.getRole())) {
-            return promoCodeRepository.findAll();
-        }
-        return promoCodeRepository.findByCreatorId(admin.getId());
+
+        List<PromoCode> codes = "SUPERADMIN".equals(admin.getRole())
+                ? promoCodeRepository.findAll()
+                : promoCodeRepository.findByCreatorId(admin.getId());
+
+        var mappedCodes = codes.stream().map(this::mapToDto).collect(Collectors.toList());
+
+        return ResponseEntity.ok(mappedCodes);
     }
 
     @PostMapping
+    @Transactional
     public ResponseEntity<?> createPromoCode(@RequestBody Map<String, Object> payload, @AuthenticationPrincipal OAuth2User principal) {
         User admin = userRepository.findByDiscordId(principal.getAttribute("id")).orElseThrow();
 
@@ -68,7 +76,27 @@ public class AdminPromoCodeController {
         }
 
         PromoCode saved = promoCodeRepository.save(code);
-        auditLogRepository.save(AuditLog.builder().adminDiscordId(admin.getDiscordId()).action("CREATE_PROMO").details("Created promo code: " + saved.getCode()).build());
-        return ResponseEntity.ok(saved);
+        auditLogRepository.save(AuditLog.builder()
+                .adminDiscordId(admin.getDiscordId())
+                .action("CREATE_PROMO")
+                .details("Created promo code: " + saved.getCode())
+                .build());
+
+        return ResponseEntity.ok(mapToDto(saved));
+    }
+
+    private Map<String, Object> mapToDto(PromoCode p) {
+        return Map.of(
+                "id", p.getId(),
+                "code", p.getCode(),
+                "discountPercent", p.getDiscountPercent() != null ? p.getDiscountPercent() : "",
+                "discountAmount", p.getDiscountAmount() != null ? p.getDiscountAmount() : "",
+                "usageLimit", p.getUsageLimit() != null ? p.getUsageLimit() : "",
+                "isPerUser", p.isPerUser(),
+                "isActive", p.isActive(),
+                "targetAsset", p.getTargetAsset() != null ? Map.of("id", p.getTargetAsset().getId(), "title", p.getTargetAsset().getTitle()) : "",
+                "targetCategory", p.getTargetCategory() != null ? Map.of("id", p.getTargetCategory().getId(), "name", p.getTargetCategory().getName()) : "",
+                "targetTag", p.getTargetTag() != null ? Map.of("id", p.getTargetTag().getId(), "name", p.getTargetTag().getName()) : ""
+        );
     }
 }
