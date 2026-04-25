@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import pl.cramber.assetstore.dto.AssetRequest;
 import pl.cramber.assetstore.entity.Asset;
@@ -133,5 +134,28 @@ public class AdminAssetController {
         } else {
             asset.setTags(new HashSet<>());
         }
+    }
+
+    @DeleteMapping("/{id}")
+    @Transactional
+    public ResponseEntity<?> deleteAsset(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal OAuth2User principal) {
+
+        Asset asset = assetRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("ASSET_NOT_FOUND"));
+
+        User admin = userRepository.findByDiscordId(principal.getAttribute("id")).orElseThrow();
+        String role = principal.getAuthorities().toString();
+
+        if (!role.contains("ROLE_SUPERADMIN") && !asset.getCreator().getId().equals(admin.getId())) {
+            return ResponseEntity.status(403).build();
+        }
+
+        asset.setVisibility("ARCHIVED");
+        assetRepository.save(asset);
+
+        logAction(principal, "ARCHIVE_ASSET", "Archived (Soft Deleted) asset: " + asset.getTitle() + " (" + asset.getId() + ")");
+        return ResponseEntity.ok().build();
     }
 }

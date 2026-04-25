@@ -31,6 +31,10 @@ public class PurchaseService {
             throw new RuntimeException("ORDER_NOT_COMPLETED");
         }
 
+        if ("ARCHIVED".equals(order.getAsset().getVisibility())) {
+            throw new RuntimeException("ASSET_ARCHIVED_DOWNLOAD_BLOCKED");
+        }
+
         if (order.isDownloaded()) {
             throw new RuntimeException("ALREADY_DOWNLOADED");
         }
@@ -45,6 +49,10 @@ public class PurchaseService {
     public String processPurchase(UUID userId, UUID assetId, String promoCodeName) {
         User user = userRepository.findByIdForUpdate(userId).orElseThrow();
         Asset asset = assetRepository.findById(assetId).orElseThrow();
+
+        if (!"PUBLIC".equals(asset.getVisibility()) && !"UNLISTED".equals(asset.getVisibility())) {
+            throw new RuntimeException("ASSET_UNAVAILABLE");
+        }
 
         boolean alreadyOwned = orderRepository.findByUserIdAndAssetIdAndStatusNot(userId, assetId, "CANCELLED").isPresent();
         if (alreadyOwned) throw new RuntimeException("ALREADY_OWNED");

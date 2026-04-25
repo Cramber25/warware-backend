@@ -24,7 +24,7 @@ public class AssetController {
     @GetMapping("/{id}")
     public ResponseEntity<Asset> getAssetById(@PathVariable UUID id) {
         return assetRepository.findById(id)
-                .filter(asset -> !asset.getVisibility().equals("PRIVATE")) // Przepuszcza PUBLIC i UNLISTED
+                .filter(asset -> !asset.getVisibility().equals("PRIVATE") && !asset.getVisibility().equals("ARCHIVED"))
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
