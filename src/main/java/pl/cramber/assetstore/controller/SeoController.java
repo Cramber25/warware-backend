@@ -20,7 +20,7 @@ public class SeoController {
     private final RestTemplate restTemplate = new RestTemplate();
 
     @GetMapping(value = "/asset/{id}", produces = MediaType.TEXT_HTML_VALUE)
-    public ResponseEntity<String> getAssetPage(@PathVariable UUID id) {
+    public ResponseEntity<String> getAssetPage(@PathVariable String id) {
         String frontendUrl = "http://roblox_store_frontend:80/index.html";
         String html;
 
@@ -34,13 +34,20 @@ public class SeoController {
             return ResponseEntity.status(500).body("Frontend returned empty response");
         }
 
-        Asset asset = assetRepository.findById(id).orElse(null);
+        UUID assetId;
+        try {
+            assetId = UUID.fromString(id);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.ok(html);
+        }
+
+        Asset asset = assetRepository.findById(assetId).orElse(null);
 
         if (asset == null || "ARCHIVED".equals(asset.getVisibility()) || "PRIVATE".equals(asset.getVisibility())) {
             return ResponseEntity.ok(html);
         }
 
-        String title = asset.getTitle() + " | WARWARE";
+        String title = asset.getTitle() + " | WarWare Store";
         String description = cleanMarkdown(asset.getDescription());
         if (description.length() > 150) {
             description = description.substring(0, 147) + "...";
