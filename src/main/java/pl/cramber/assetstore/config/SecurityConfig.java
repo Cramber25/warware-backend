@@ -56,6 +56,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/tags/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/settings/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/sitemap.xml").permitAll()
 
                         .requestMatchers("/api/admin/metadata/**").hasRole("SUPERADMIN")
                         .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "SUPERADMIN")
