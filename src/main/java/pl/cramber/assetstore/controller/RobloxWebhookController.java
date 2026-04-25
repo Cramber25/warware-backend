@@ -21,7 +21,14 @@ public class RobloxWebhookController {
     private String secretKey;
 
     @GetMapping("/check-user/{robloxId}")
-    public ResponseEntity<String> checkUser(@PathVariable String robloxId) {
+    public ResponseEntity<String> checkUser(
+            @RequestHeader(value = "X-Api-Key", required = false) String apiKey,
+            @PathVariable String robloxId) {
+
+        if (!secretKey.equals(apiKey)) {
+            return ResponseEntity.status(403).build();
+        }
+
         return userRepository.findByRobloxId(robloxId)
                 .map(user -> ResponseEntity.ok("FOUND"))
                 .orElse(ResponseEntity.ok("NOT_FOUND"));
@@ -29,7 +36,7 @@ public class RobloxWebhookController {
 
     @PostMapping("/deposit")
     public ResponseEntity<Void> deposit(
-            @RequestHeader("X-Api-Key") String apiKey,
+            @RequestHeader(value = "X-Api-Key", required = false) String apiKey,
             @RequestBody Map<String, Object> payload) {
 
         if (!secretKey.equals(apiKey)) {
