@@ -47,7 +47,7 @@ public class SeoController {
             return ResponseEntity.ok(html);
         }
 
-        String title = asset.getTitle() + " | WARWARE";
+        String title = asset.getTitle();
         String description = cleanMarkdown(asset.getDescription());
         if (description.length() > 150) {
             description = description.substring(0, 147) + "...";
@@ -59,7 +59,11 @@ public class SeoController {
 
     private String cleanMarkdown(String markdown) {
         if (markdown == null) return "";
-        return markdown.replaceAll("[#*_\\->\\[\\]()]", "").trim();
+        return markdown.replaceAll("[#*_\\->\\[\\]()]", "")
+                .replace("\n", " ")
+                .replace("\r", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
     }
 
     private String injectMetaTags(String html, String title, String description, String image) {
