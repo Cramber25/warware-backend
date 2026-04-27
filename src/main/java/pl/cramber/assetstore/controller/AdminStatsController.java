@@ -8,12 +8,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import pl.cramber.assetstore.dto.SaleDto;
 import pl.cramber.assetstore.entity.User;
 import pl.cramber.assetstore.repository.AuditLogRepository;
 import pl.cramber.assetstore.repository.OrderRepository;
 import pl.cramber.assetstore.repository.UserRepository;
 
-import java.util.Map;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
@@ -27,7 +28,7 @@ public class AdminStatsController {
 
     @GetMapping("/sales")
     @Transactional(readOnly = true)
-    public ResponseEntity<?> getSalesHistory(@AuthenticationPrincipal OAuth2User principal) {
+    public ResponseEntity<List<SaleDto>> getSalesHistory(@AuthenticationPrincipal OAuth2User principal) {
         String discordId = principal.getAttribute("id");
         User admin = userRepository.findByDiscordId(discordId).orElseThrow();
 
@@ -35,14 +36,14 @@ public class AdminStatsController {
                 ? orderRepository.findAllByOrderTypeOrderByCreatedAtDesc("PURCHASE")
                 : orderRepository.findByAssetCreatorIdAndOrderTypeOrderByCreatedAtDesc(admin.getId(), "PURCHASE");
 
-        var result = orders.stream().map(o -> Map.of(
-                "orderId", o.getId(),
-                "status", o.getStatus(),
-                "createdAt", o.getCreatedAt(),
-                "buyer", o.getUser().getDiscordUsername() != null ? o.getUser().getDiscordUsername() : o.getUser().getDiscordId(),
-                "assetTitle", o.getAsset().getTitle(),
-                "price", o.getPurchasePrice(),
-                "promoCode", o.getPromoCode() != null ? o.getPromoCode().getCode() : null
+        List<SaleDto> result = orders.stream().map(o -> new SaleDto(
+                o.getId(),
+                o.getStatus(),
+                o.getCreatedAt(),
+                o.getUser().getDiscordUsername() != null ? o.getUser().getDiscordUsername() : o.getUser().getDiscordId(),
+                o.getAsset().getTitle(),
+                o.getPurchasePrice(),
+                o.getPromoCode() != null ? o.getPromoCode().getCode() : null
         )).collect(Collectors.toList());
 
         return ResponseEntity.ok(result);
