@@ -12,6 +12,7 @@ public record UserResponse(
         String robloxId,
         String email,
         String role,
+        Integer balance,
         boolean banned,
         List<LoginLogDto> recentLogins
 ) {

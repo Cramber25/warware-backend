@@ -145,6 +145,7 @@ public class AdminUserController {
                 user.getRobloxId(),
                 safeEmail,
                 user.getRole(),
+                user.getBalance(),
                 user.isBanned(),
                 recentLogins
         );
