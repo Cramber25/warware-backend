@@ -21,6 +21,7 @@ public class PurchaseService {
     private final PromoCodeRepository promoCodeRepository;
     private final PromoCodeUsageRepository promoCodeUsageRepository;
     private final R2StorageService r2StorageService;
+    private final DiscordNotificationService discordNotificationService;
 
     @Transactional
     public String generateOneTimeDownload(UUID userId, UUID assetId) {
@@ -115,15 +116,22 @@ public class PurchaseService {
         }
 
         boolean isTrusted = "TRUSTED".equals(user.getRole()) || "SUPERADMIN".equals(user.getRole());
+        String statusResult;
+
         if ("INSTANT".equals(asset.getDeliveryType()) || isTrusted || finalPrice == 0) {
             order.setStatus("COMPLETED");
             orderRepository.save(order);
-            return "SUCCESS";
+            statusResult = "SUCCESS";
         } else {
             orderRepository.save(order);
             ticketRepository.save(Ticket.builder().order(order).status("OPEN").build());
-            return "VERIFICATION_REQUIRED";
+            statusResult = "VERIFICATION_REQUIRED";
         }
+
+        String username = user.getRobloxUsername() != null ? user.getRobloxUsername() : user.getDiscordUsername();
+        discordNotificationService.sendPurchaseNotification(username, user.getDiscordId(), asset.getTitle(), asset.getId().toString());
+
+        return statusResult;
     }
 
     @Transactional

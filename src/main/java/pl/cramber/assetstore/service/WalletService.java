@@ -14,6 +14,7 @@ public class WalletService {
 
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
+    private final DiscordNotificationService discordNotificationService;
 
     @Transactional
     public void addFunds(String robloxId, Integer amount) {
@@ -29,5 +30,8 @@ public class WalletService {
                 .type("ROBLOX_DEPOSIT")
                 .build();
         transactionRepository.save(transaction);
+
+        String username = user.getRobloxUsername() != null ? user.getRobloxUsername() : user.getDiscordUsername();
+        discordNotificationService.sendDepositNotification(username, user.getDiscordId(), amount);
     }
 }
