@@ -37,9 +37,10 @@ spring:
       max-request-size: 128MB
     session:
       cookie:
+        max-age: 7d
         http-only: true
         same-site: lax
-        secure: false
+        secure: true
 
 cloud:
   r2:
