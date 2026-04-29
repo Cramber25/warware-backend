@@ -13,6 +13,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -81,6 +82,12 @@ public class R2Service {
         String finalPublicUrl = publicUrl + "/" + objectKey;
 
         return new ImageUploadTicket(presignedUploadUrl, finalPublicUrl);
+    }
+
+    public List<ImageUploadTicket> generateImageUploadUrls(UUID userId, List<String> originalFilenames) {
+        return originalFilenames.stream()
+                .map(filename -> generateImageUploadUrl(userId, filename))
+                .toList();
     }
 
     private String getFileExtension(String filename) {
