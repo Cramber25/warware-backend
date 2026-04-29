@@ -23,7 +23,10 @@ public class R2Service {
     private final S3Presigner s3Presigner;
 
     @Value("${cloud.r2.bucket-name}")
-    private String bucketName;
+    private String privateBucketName;
+
+    @Value("${cloud.r2.public-bucket-name}")
+    private String publicBucketName;
 
     @Value("${cloud.r2.public-url}")
     private String publicUrl;
@@ -39,7 +42,7 @@ public class R2Service {
         String fileKey = "assets/" + uploaderId.toString() + "/" + UUID.randomUUID() + extension;
 
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                .bucket(bucketName)
+                .bucket(privateBucketName)
                 .key(fileKey)
                 .contentType(file.getContentType())
                 .build();
@@ -50,8 +53,10 @@ public class R2Service {
     }
 
     public void deleteFile(String fileKey) {
+        String targetBucket = fileKey.startsWith("images/") ? publicBucketName : privateBucketName;
+
         DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
-                .bucket(bucketName)
+                .bucket(targetBucket)
                 .key(fileKey)
                 .build();
 
@@ -62,7 +67,7 @@ public class R2Service {
         String objectKey = "images/" + userId + "/" + UUID.randomUUID() + "-" + originalFilename;
 
         PutObjectRequest objectRequest = PutObjectRequest.builder()
-                .bucket(bucketName)
+                .bucket(publicBucketName)
                 .key(objectKey)
                 .contentType("image/" + getFileExtension(originalFilename))
                 .build();
@@ -73,7 +78,6 @@ public class R2Service {
                 .build();
 
         String presignedUploadUrl = s3Presigner.presignPutObject(presignRequest).url().toString();
-
         String finalPublicUrl = publicUrl + "/" + objectKey;
 
         return new ImageUploadTicket(presignedUploadUrl, finalPublicUrl);

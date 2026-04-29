@@ -47,6 +47,7 @@ cloud:
     secret-key: ${R2_SECRET_KEY}
     bucket-name: ${R2_BUCKET_NAME}
     public-url: ${R2_PUBLIC_URL}
+    public-bucket-name: ${R2_PUBLIC_BUCKET_NAME}
 
 server:
   forward-headers-strategy: framework
