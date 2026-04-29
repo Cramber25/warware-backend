@@ -19,9 +19,6 @@ public class R2StorageService {
     @Value("${cloud.r2.bucket-name}")
     private String bucketName;
 
-    @Value("${cloud.r2.public-url}")
-    private String publicUrl;
-
     public String generatePresignedUrl(String fileKey, int expirationMinutes) {
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                 .bucket(bucketName)
@@ -34,9 +31,7 @@ public class R2StorageService {
                 .build();
 
         PresignedGetObjectRequest presignedRequest = s3Presigner.presignGetObject(presignRequest);
-        String rawUrl = presignedRequest.url().toString();
-        String pathAndSignature = rawUrl.substring(rawUrl.indexOf("/" + fileKey));
 
-        return publicUrl + pathAndSignature;
+        return presignedRequest.url().toString();
     }
 }
