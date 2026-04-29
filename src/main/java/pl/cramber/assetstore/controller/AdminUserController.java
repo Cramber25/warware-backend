@@ -143,6 +143,7 @@ public class AdminUserController {
                 user.getDiscordUsername(),
                 user.getDiscordAvatarUrl(),
                 user.getRobloxId(),
+                user.getRobloxUsername(),
                 safeEmail,
                 user.getRole(),
                 user.getBalance(),

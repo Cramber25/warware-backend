@@ -10,6 +10,7 @@ public record UserResponse(
         String discordUsername,
         String discordAvatarUrl,
         String robloxId,
+        String robloxUsername,
         String email,
         String role,
         Integer balance,
