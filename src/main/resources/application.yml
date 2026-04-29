@@ -31,19 +31,14 @@ spring:
             token-uri: https://discord.com/api/oauth2/token
             user-info-uri: https://discord.com/api/users/@me
             user-name-attribute: id
+  session:
+    store-type: jdbc
+    jdbc:
+      initialize-schema: never
   servlet:
     multipart:
       max-file-size: 128MB
       max-request-size: 128MB
-    session:
-      store-type: jdbc
-      jdbc:
-        initialize-schema: never
-      cookie:
-        max-age: 7d
-        http-only: true
-        same-site: lax
-        secure: true
 
 cloud:
   r2:
@@ -51,6 +46,7 @@ cloud:
     access-key: ${R2_ACCESS_KEY}
     secret-key: ${R2_SECRET_KEY}
     bucket-name: ${R2_BUCKET_NAME}
+
 server:
   forward-headers-strategy: framework
   tomcat:
@@ -58,7 +54,9 @@ server:
     protocol-header: x-forwarded-proto
   servlet:
     session:
+      timeout: 7d
       cookie:
+        max-age: 7d
         http-only: true
         same-site: lax
-        secure: false
+        secure: true
