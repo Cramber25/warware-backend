@@ -6,17 +6,20 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import pl.cramber.assetstore.dto.UserResponse;
 import pl.cramber.assetstore.entity.Asset;
 import pl.cramber.assetstore.entity.AuditLog;
 import pl.cramber.assetstore.entity.User;
 import pl.cramber.assetstore.repository.AssetRepository;
 import pl.cramber.assetstore.repository.AuditLogRepository;
+import pl.cramber.assetstore.repository.UserLoginLogRepository;
 import pl.cramber.assetstore.repository.UserRepository;
 import pl.cramber.assetstore.service.PurchaseService;
 
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin/users")
@@ -27,6 +30,7 @@ public class AdminUserController {
     private final AssetRepository assetRepository;
     private final PurchaseService purchaseService;
     private final AuditLogRepository auditLogRepository;
+    private final UserLoginLogRepository userLoginLogRepository;
 
     private void logAction(OAuth2User principal, String action, String details) {
         if (principal == null) return;
@@ -38,8 +42,14 @@ public class AdminUserController {
     }
 
     @GetMapping
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<UserResponse>> getAllUsers() {
+        List<UserResponse> mappedUsers = userRepository.findAll()
+                .stream()
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(mappedUsers);
     }
 
     @PutMapping("/{userId}/role")
@@ -56,9 +66,10 @@ public class AdminUserController {
         }
 
         user.setRole(newRole);
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
+
         logAction(principal, "UPDATE_ROLE", "Changed role of user " + user.getDiscordId() + " to " + newRole);
-        return ResponseEntity.ok(user);
+        return ResponseEntity.ok(mapToDto(savedUser));
     }
 
     @PutMapping("/{userId}/ban")
@@ -71,9 +82,10 @@ public class AdminUserController {
 
         boolean banned = payload.get("banned");
         user.setBanned(banned);
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
+
         logAction(principal, banned ? "BAN_USER" : "UNBAN_USER", "Toggled ban for user " + user.getDiscordId());
-        return ResponseEntity.ok(user);
+        return ResponseEntity.ok(mapToDto(savedUser));
     }
 
     @PostMapping("/blacklist")
@@ -111,5 +123,30 @@ public class AdminUserController {
 
         logAction(principal, "GRANT_ASSET", details);
         return ResponseEntity.ok().build();
+    }
+
+    private UserResponse mapToDto(User user) {
+        boolean isSuperadmin = "SUPERADMIN".equals(user.getRole());
+
+        List<UserResponse.LoginLogDto> recentLogins = isSuperadmin
+                ? List.of()
+                : userLoginLogRepository.findTop5ByUserIdOrderByCreatedAtDesc(user.getId())
+                  .stream()
+                  .map(log -> new UserResponse.LoginLogDto(log.getIpAddress(), log.getCreatedAt()))
+                  .toList();
+
+        String safeEmail = isSuperadmin ? null : user.getEmail();
+
+        return new UserResponse(
+                user.getId(),
+                user.getDiscordId(),
+                user.getDiscordUsername(),
+                user.getDiscordAvatarUrl(),
+                user.getRobloxId(),
+                safeEmail,
+                user.getRole(),
+                user.isBanned(),
+                recentLogins
+        );
     }
 }
