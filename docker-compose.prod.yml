@@ -42,7 +42,7 @@ services:
       - 'traefik.enable=true'
       - 'traefik.docker.network=warware_net'
       - 'traefik.http.routers.warware_api.entrypoints=web'
-      - 'traefik.http.routers.warware_api.rule=PathPrefix(`/api`)'
+      - 'traefik.http.routers.warware_api.rule=PathPrefix(`/api`, `/oauth2`, `/login`, `/logout`, `/asset`)'
       - 'traefik.http.services.warware_api.loadbalancer.server.port=8080'
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8080/api/assets"]
