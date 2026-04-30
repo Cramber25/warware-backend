@@ -38,6 +38,8 @@ services:
         condition: service_healthy
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=warware_net"
+      - "traefik.http.routers.backend.entrypoints=web"
       - "traefik.http.routers.backend.rule=PathPrefix(`/`)"
       - "traefik.http.services.backend.loadbalancer.server.port=8080"
     healthcheck:
