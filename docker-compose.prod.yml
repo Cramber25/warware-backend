@@ -2,6 +2,8 @@ services:
   traefik:
     image: traefik:v3.0
     container_name: traefik
+    environment:
+      DOCKER_API_VERSION: ${DOCKER_API_VERSION}
     command:
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
@@ -37,11 +39,11 @@ services:
       db:
         condition: service_healthy
     labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=warware_net"
-      - "traefik.http.routers.backend.entrypoints=web"
-      - "traefik.http.routers.backend.rule=PathPrefix(`/`)"
-      - "traefik.http.services.backend.loadbalancer.server.port=8080"
+      - 'traefik.enable=true'
+      - 'traefik.docker.network=warware_net'
+      - 'traefik.http.routers.warware_api.entrypoints=web'
+      - 'traefik.http.routers.warware_api.rule=PathPrefix(`/api`)'
+      - 'traefik.http.services.warware_api.loadbalancer.server.port=8080'
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8080/api/assets"]
       interval: 5s
