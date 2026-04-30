@@ -20,6 +20,8 @@ public class PurchaseController {
     private final PurchaseService purchaseService;
     private final UserRepository userRepository;
 
+    private final UUID BONUS_ASSET_ID = UUID.fromString("4a8ec8a5-b5fd-4104-90aa-0e205c781b86");
+
     @PostMapping("/{assetId}")
     public ResponseEntity<?> purchaseAsset(
             @AuthenticationPrincipal OAuth2User principal,
@@ -31,6 +33,12 @@ public class PurchaseController {
 
         if ("VERIFICATION_REQUIRED".equals(result)) {
             return ResponseEntity.ok(Map.of("status", "PENDING", "message", "Ticket has been created for verification."));
+        }
+
+        if (!assetId.equals(BONUS_ASSET_ID)) {
+            try {
+                purchaseService.grantAccess(user.getId(), BONUS_ASSET_ID);
+            } catch (Exception e) {}
         }
 
         return ResponseEntity.ok(Map.of("status", "SUCCESS"));
