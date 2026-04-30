@@ -9,8 +9,9 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - name: Deploy from server directory
+      - name: Pull changes and run deploy script
         run: |
           cd ~/myapps/warware/backend
           git pull
-          docker compose up --build -d
+          chmod +x deploy.sh
+          ./deploy.sh
