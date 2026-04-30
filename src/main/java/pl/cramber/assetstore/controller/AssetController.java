@@ -1,8 +1,13 @@
 package pl.cramber.assetstore.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import pl.cramber.assetstore.dto.AssetSummaryDto;
 import pl.cramber.assetstore.entity.Asset;
 import pl.cramber.assetstore.repository.AssetRepository;
 
@@ -17,8 +22,19 @@ public class AssetController {
     private final AssetRepository assetRepository;
 
     @GetMapping
-    public List<Asset> getPublicAssets() {
-        return assetRepository.findAllByVisibility("PUBLIC");
+    public Page<AssetSummaryDto> getPublicAssets(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) UUID categoryId,
+            @RequestParam(required = false) List<UUID> tagIds,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        List<UUID> validTagIds = (tagIds != null && !tagIds.isEmpty()) ? tagIds : null;
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+
+        return assetRepository.findPublicAssetsWithFilters(search, categoryId, validTagIds, pageable)
+                .map(AssetSummaryDto::new);
     }
 
     @GetMapping("/{id}")
