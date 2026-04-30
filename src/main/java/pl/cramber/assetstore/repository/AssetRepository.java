@@ -21,7 +21,7 @@ public interface AssetRepository extends JpaRepository<Asset, UUID> {
     @Query("SELECT DISTINCT a FROM Asset a " +
             "LEFT JOIN a.tags t " +
             "WHERE a.visibility = 'PUBLIC' " +
-            "AND (:search IS NULL OR LOWER(a.title) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "AND LOWER(a.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "AND (:categoryId IS NULL OR a.category.id = :categoryId) " +
             "AND (:tagIds IS NULL OR t.id IN :tagIds)")
     Page<Asset> findPublicAssetsWithFilters(

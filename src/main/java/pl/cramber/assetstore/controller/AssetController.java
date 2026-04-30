@@ -29,11 +29,12 @@ public class AssetController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
+        String validSearch = (search != null) ? search : "";
         List<UUID> validTagIds = (tagIds != null && !tagIds.isEmpty()) ? tagIds : null;
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
-        return assetRepository.findPublicAssetsWithFilters(search, categoryId, validTagIds, pageable)
+        return assetRepository.findPublicAssetsWithFilters(validSearch, categoryId, validTagIds, pageable)
                 .map(AssetSummaryDto::new);
     }
 
