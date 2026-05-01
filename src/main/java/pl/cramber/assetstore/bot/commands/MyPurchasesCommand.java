@@ -46,7 +46,7 @@ public class MyPurchasesCommand implements BotCommand {
         OptionMapping pageOption = event.getOption("page");
         int page = pageOption != null ? Math.max(1, pageOption.getAsInt()) : 1;
 
-        List<Order> orders = orderRepository.findByUserId(dbUser.getId()).stream()
+        List<Order> orders = orderRepository.findWithAssetByUserId(dbUser.getId()).stream()
                 .filter(o -> "COMPLETED".equals(o.getStatus()))
                 .collect(Collectors.toList());
 

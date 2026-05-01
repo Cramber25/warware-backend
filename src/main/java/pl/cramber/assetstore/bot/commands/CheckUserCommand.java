@@ -56,7 +56,7 @@ public class CheckUserCommand implements BotCommand {
         OptionMapping pageOption = event.getOption("page");
         int page = pageOption != null ? Math.max(1, pageOption.getAsInt()) : 1;
 
-        List<Order> orders = orderRepository.findByUserId(targetDbUser.getId()).stream()
+        List<Order> orders = orderRepository.findWithAssetByUserId(targetDbUser.getId()).stream()
                 .filter(o -> "COMPLETED".equals(o.getStatus()))
                 .collect(Collectors.toList());
 
