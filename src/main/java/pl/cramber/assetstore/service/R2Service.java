@@ -2,6 +2,7 @@ package pl.cramber.assetstore.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -18,6 +19,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "discord.bot.enabled", havingValue = "false", matchIfMissing = true)
 public class R2Service {
 
     private final S3Client s3Client;
