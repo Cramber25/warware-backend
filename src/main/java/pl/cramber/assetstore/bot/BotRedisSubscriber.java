@@ -26,56 +26,49 @@ public class BotRedisSubscriber implements MessageListener {
 
     @Override
     public void onMessage(Message message, byte[] pattern) {
-        String body = new String(message.getBody(), StandardCharsets.UTF_8);
-        String[] parts = body.split("::");
+        try {
+            String rawBody = new String(message.getBody(), StandardCharsets.UTF_8);
+            String body = rawBody.replace("\"", "").trim();
 
-        if (parts.length != 2) return;
+            String[] parts = body.split("::");
+            if (parts.length != 2) return;
 
-        String discordId = parts[0];
-        String robloxUsername = parts[1];
+            String discordId = parts[0].trim();
+            String robloxUsername = parts[1].trim();
 
-        Map<String, String> settings = storeSettingRepository.findAll().stream()
-                .collect(Collectors.toMap(StoreSetting::getSettingKey, StoreSetting::getSettingValue));
+            Map<String, String> settings = storeSettingRepository.findAll().stream()
+                    .collect(Collectors.toMap(StoreSetting::getSettingKey, StoreSetting::getSettingValue));
 
-        String guildId = settings.get("DISCORD_GUILD_ID");
-        if (guildId == null || guildId.isEmpty()) return;
+            String guildId = settings.get("DISCORD_GUILD_ID");
+            if (guildId == null || guildId.isEmpty() || botManager.getJda() == null) return;
 
-        Guild guild = botManager.getJda().getGuildById(guildId);
-        if (guild == null) return;
+            Guild guild = botManager.getJda().getGuildById(guildId);
+            if (guild == null) return;
 
-        String verifiedRoleId = settings.get("DISCORD_VERIFIED_ROLE_ID");
-        String unverifiedRoleId = settings.get("DISCORD_UNVERIFIED_ROLE_ID");
+            String verifiedRoleId = settings.get("DISCORD_VERIFIED_ROLE_ID");
+            String unverifiedRoleId = settings.get("DISCORD_UNVERIFIED_ROLE_ID");
 
-        guild.retrieveMemberById(discordId).queue(member -> {
-            if (verifiedRoleId != null && !verifiedRoleId.isEmpty()) {
-                Role verifiedRole = guild.getRoleById(verifiedRoleId);
-                if (verifiedRole != null) {
-                    guild.addRoleToMember(member, verifiedRole).queue(
-                            success -> {},
-                            error -> log.warn("Lack of permission to add verified role to {}", member.getEffectiveName())
-                    );
+            guild.retrieveMemberById(discordId).queue(member -> {
+                if (verifiedRoleId != null && !verifiedRoleId.isEmpty()) {
+                    Role verifiedRole = guild.getRoleById(verifiedRoleId);
+                    if (verifiedRole != null) {
+                        guild.addRoleToMember(member, verifiedRole).queue(null, e -> log.error(e.getMessage()));
+                    }
                 }
-            }
 
-            if (unverifiedRoleId != null && !unverifiedRoleId.isEmpty()) {
-                Role unverifiedRole = guild.getRoleById(unverifiedRoleId);
-                if (unverifiedRole != null) {
-                    guild.removeRoleFromMember(member, unverifiedRole).queue(
-                            success -> {},
-                            error -> log.warn("Lack of permission to remove unverified role from {}", member.getEffectiveName())
-                    );
+                if (unverifiedRoleId != null && !unverifiedRoleId.isEmpty()) {
+                    Role unverifiedRole = guild.getRoleById(unverifiedRoleId);
+                    if (unverifiedRole != null) {
+                        guild.removeRoleFromMember(member, unverifiedRole).queue(null, e -> log.error(e.getMessage()));
+                    }
                 }
-            }
 
-            String newNick = robloxUsername.length() > 32 ? robloxUsername.substring(0, 32) : robloxUsername;
-            try {
-                member.modifyNickname(newNick).queue(
-                        success -> {},
-                        error -> log.warn("Cannot change nickname for {}: {}", member.getEffectiveName(), error.getMessage())
-                );
-            } catch (Exception e) {
-                log.warn("Nickname modification failed for {}: {}", member.getEffectiveName(), e.getMessage());
-            }
-        }, failure -> log.error("User {} not found in guild", discordId));
+                String newNick = robloxUsername.length() > 32 ? robloxUsername.substring(0, 32) : robloxUsername;
+                member.modifyNickname(newNick).queue(null, e -> log.warn("Nickname change failed"));
+            }, failure -> log.error("Member not found for live verification"));
+
+        } catch (Exception e) {
+            log.error("Redis subscriber error", e);
+        }
     }
 }
