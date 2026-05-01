@@ -1,6 +1,7 @@
 package pl.cramber.assetstore.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -14,6 +15,7 @@ import pl.cramber.assetstore.repository.UserRepository;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "discord.bot.enabled", havingValue = "false", matchIfMissing = true)
 public class AuthController {
 
     private final UserRepository userRepository;
