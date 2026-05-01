@@ -1,6 +1,7 @@
 package pl.cramber.assetstore.bot;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Role;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -14,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Component
 @ConditionalOnProperty(name = "discord.bot.enabled", havingValue = "true")
 @RequiredArgsConstructor
@@ -47,16 +49,33 @@ public class BotRedisSubscriber implements MessageListener {
         guild.retrieveMemberById(discordId).queue(member -> {
             if (verifiedRoleId != null && !verifiedRoleId.isEmpty()) {
                 Role verifiedRole = guild.getRoleById(verifiedRoleId);
-                if (verifiedRole != null) guild.addRoleToMember(member, verifiedRole).queue();
+                if (verifiedRole != null) {
+                    guild.addRoleToMember(member, verifiedRole).queue(
+                            success -> {},
+                            error -> log.warn("Lack of permission to add verified role to {}", member.getEffectiveName())
+                    );
+                }
             }
 
             if (unverifiedRoleId != null && !unverifiedRoleId.isEmpty()) {
                 Role unverifiedRole = guild.getRoleById(unverifiedRoleId);
-                if (unverifiedRole != null) guild.removeRoleFromMember(member, unverifiedRole).queue();
+                if (unverifiedRole != null) {
+                    guild.removeRoleFromMember(member, unverifiedRole).queue(
+                            success -> {},
+                            error -> log.warn("Lack of permission to remove unverified role from {}", member.getEffectiveName())
+                    );
+                }
             }
 
             String newNick = robloxUsername.length() > 32 ? robloxUsername.substring(0, 32) : robloxUsername;
-            member.modifyNickname(newNick).queue();
-        }, failure -> {});
+            try {
+                member.modifyNickname(newNick).queue(
+                        success -> {},
+                        error -> log.warn("Cannot change nickname for {}: {}", member.getEffectiveName(), error.getMessage())
+                );
+            } catch (Exception e) {
+                log.warn("Nickname modification failed for {}: {}", member.getEffectiveName(), e.getMessage());
+            }
+        }, failure -> log.error("User {} not found in guild", discordId));
     }
 }
