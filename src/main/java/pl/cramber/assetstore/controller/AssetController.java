@@ -6,6 +6,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import pl.cramber.assetstore.dto.AssetSummaryDto;
 import pl.cramber.assetstore.entity.Asset;
@@ -39,6 +40,8 @@ public class AssetController {
         String validSortBy = switch (sortBy.toLowerCase()) {
             case "price" -> "price";
             case "title" -> "title";
+            case "viewcount" -> "viewCount";
+            case "rating" -> "averageRating";
             default -> "createdAt";
         };
 
@@ -49,10 +52,17 @@ public class AssetController {
     }
 
     @GetMapping("/{id}")
+    @Transactional
     public ResponseEntity<Asset> getAssetById(@PathVariable UUID id) {
         return assetRepository.findById(id)
                 .filter(asset -> !asset.getVisibility().equals("PRIVATE") && !asset.getVisibility().equals("ARCHIVED"))
-                .map(ResponseEntity::ok)
+                .map(asset -> {
+                    assetRepository.incrementViewCount(id);
+                    asset.setViewCount(asset.getViewCount() + 1);
+
+                    asset.setAverageRating(Math.round(asset.getAverageRating() * 10.0) / 10.0);
+                    return ResponseEntity.ok(asset);
+                })
                 .orElse(ResponseEntity.notFound().build());
     }
 }

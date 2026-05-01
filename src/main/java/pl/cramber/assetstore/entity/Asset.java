@@ -66,4 +66,16 @@ public class Asset {
 
     @Column(name = "created_at")
     private ZonedDateTime createdAt;
+
+    @Column(name = "view_count", nullable = false)
+    @Builder.Default
+    private Integer viewCount = 0;
+
+    @Column(name = "average_rating", nullable = false)
+    @Builder.Default
+    private Double averageRating = 0.0;
+
+    @Column(name = "rating_count", nullable = false)
+    @Builder.Default
+    private Integer ratingCount = 0;
 }

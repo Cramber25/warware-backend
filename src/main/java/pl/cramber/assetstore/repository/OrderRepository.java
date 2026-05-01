@@ -14,4 +14,6 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     Optional<Order> findByUserIdAndAssetIdAndStatusNot(UUID userId, UUID assetId, String status);
     List<Order> findAllByOrderTypeOrderByCreatedAtDesc(String orderType);
     List<Order> findByAssetCreatorIdAndOrderTypeOrderByCreatedAtDesc(UUID creatorId, String orderType);
+
+    boolean existsByUserIdAndAssetIdAndStatus(UUID userId, UUID assetId, String status);
 }

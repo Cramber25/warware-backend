@@ -10,6 +10,9 @@ public class AssetSummaryDto {
     public final Object category;
     public final Object tags;
     public final String thumbnailUrl;
+    public final Integer viewCount;
+    public final Double averageRating;
+    public final Integer ratingCount;
 
     public AssetSummaryDto(Asset asset) {
         this.id = asset.getId();
@@ -18,5 +21,8 @@ public class AssetSummaryDto {
         this.category = asset.getCategory();
         this.tags = asset.getTags();
         this.thumbnailUrl = asset.getThumbnailUrl();
+        this.viewCount = asset.getViewCount();
+        this.averageRating = Math.round(asset.getAverageRating() * 10.0) / 10.0;
+        this.ratingCount = asset.getRatingCount();
     }
 }
