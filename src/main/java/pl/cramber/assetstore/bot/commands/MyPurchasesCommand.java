@@ -38,7 +38,7 @@ public class MyPurchasesCommand implements BotCommand {
         Optional<pl.cramber.assetstore.entity.User> dbUserOpt = userRepository.findByDiscordId(discordId);
 
         if (dbUserOpt.isEmpty()) {
-            event.reply("You must log in on our website and link your account first.").setEphemeral(true).queue();
+            event.reply("You must log in on our website and link your account first.").setEphemeral(false).queue();
             return;
         }
 
@@ -55,7 +55,7 @@ public class MyPurchasesCommand implements BotCommand {
                     .setTitle("Your purchased assets")
                     .setColor(Color.RED)
                     .setDescription("No successful purchases found.");
-            event.replyEmbeds(emptyEmbed.build()).setEphemeral(true).queue();
+            event.replyEmbeds(emptyEmbed.build()).setEphemeral(false).queue();
             return;
         }
 
@@ -80,6 +80,6 @@ public class MyPurchasesCommand implements BotCommand {
             );
         }
 
-        event.replyEmbeds(embed.build()).setEphemeral(true).queue();
+        event.replyEmbeds(embed.build()).setEphemeral(false).queue();
     }
 }

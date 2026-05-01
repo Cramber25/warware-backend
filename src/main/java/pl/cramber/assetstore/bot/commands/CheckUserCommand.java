@@ -40,7 +40,7 @@ public class CheckUserCommand implements BotCommand {
         Optional<pl.cramber.assetstore.entity.User> executorOpt = userRepository.findByDiscordId(executorDiscordId);
 
         if (executorOpt.isEmpty() || !"SUPERADMIN".equals(executorOpt.get().getRole())) {
-            event.reply("You do not have permission to use this command.").setEphemeral(true).queue();
+            event.reply("You do not have permission to use this command.").setEphemeral(false).queue();
             return;
         }
 
@@ -48,7 +48,7 @@ public class CheckUserCommand implements BotCommand {
         Optional<pl.cramber.assetstore.entity.User> targetDbUserOpt = userRepository.findByDiscordId(targetUser.getId());
 
         if (targetDbUserOpt.isEmpty()) {
-            event.reply("This user has never logged in on the website.").setEphemeral(true).queue();
+            event.reply("This user has never logged in on the website.").setEphemeral(false).queue();
             return;
         }
 
@@ -66,7 +66,7 @@ public class CheckUserCommand implements BotCommand {
                     .setColor(Color.RED)
                     .setDescription("No successful purchases found.")
                     .addField("Balance", targetDbUser.getBalance() + " Robux", false);
-            event.replyEmbeds(emptyEmbed.build()).setEphemeral(true).queue();
+            event.replyEmbeds(emptyEmbed.build()).setEphemeral(false).queue();
             return;
         }
 
@@ -92,6 +92,6 @@ public class CheckUserCommand implements BotCommand {
             );
         }
 
-        event.replyEmbeds(embed.build()).setEphemeral(true).queue();
+        event.replyEmbeds(embed.build()).setEphemeral(false).queue();
     }
 }
