@@ -39,6 +39,12 @@ spring:
     multipart:
       max-file-size: 128MB
       max-request-size: 128MB
+  main:
+    web-application-type: ${SPRING_MAIN_WEB_APPLICATION_TYPE:servlet}
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: 6379
 
 cloud:
   r2:
@@ -63,3 +69,11 @@ server:
         http-only: true
         same-site: lax
         secure: true
+
+discord:
+  bot:
+    enabled: ${DISCORD_BOT_ENABLED:false}
+    token: ${DISCORD_TOKEN:}
+    guild-id: ${DISCORD_GUILD_ID:}
+    verified-role-id: ${DISCORD_VERIFIED_ROLE_ID:}
+    unverified-role-id: ${DISCORD_UNVERIFIED_ROLE_ID:}

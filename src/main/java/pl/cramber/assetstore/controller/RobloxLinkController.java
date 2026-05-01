@@ -2,6 +2,7 @@ package pl.cramber.assetstore.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -22,6 +23,7 @@ import java.util.Optional;
 public class RobloxLinkController {
 
     private final UserRepository userRepository;
+    private final StringRedisTemplate redisTemplate;
 
     @Value("${ROBLOX_CLIENT_ID:}")
     private String clientId;
@@ -111,6 +113,8 @@ public class RobloxLinkController {
             user.setRobloxUsername(robloxUsername);
             user.setRobloxAvatarUrl(robloxAvatarUrl);
             userRepository.save(user);
+
+            redisTemplate.convertAndSend("verification-channel", discordId + "::" + robloxUsername);
 
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.FOUND)

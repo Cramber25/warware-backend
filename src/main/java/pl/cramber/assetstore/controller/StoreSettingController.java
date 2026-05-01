@@ -11,6 +11,7 @@ import pl.cramber.assetstore.entity.StoreSetting;
 import pl.cramber.assetstore.repository.AuditLogRepository;
 import pl.cramber.assetstore.repository.StoreSettingRepository;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -20,6 +21,11 @@ public class StoreSettingController {
 
     private final StoreSettingRepository storeSettingRepository;
     private final AuditLogRepository auditLogRepository;
+
+    @GetMapping
+    public ResponseEntity<List<StoreSetting>> getAllSettings() {
+        return ResponseEntity.ok(storeSettingRepository.findAll());
+    }
 
     @GetMapping("/{key}")
     public ResponseEntity<StoreSetting> getSetting(@PathVariable String key) {
