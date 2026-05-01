@@ -29,7 +29,7 @@ public class CheckUserCommand implements BotCommand {
 
     @Override
     public SlashCommandData getCommandData() {
-        return Commands.slash("check-user", "Displays users's balance and assets (Superadmin only).")
+        return Commands.slash("check-user", "Displays user's balance, assets, and Roblox link (Superadmin only).")
                 .addOption(OptionType.USER, "user", "Select user", true)
                 .addOption(OptionType.INTEGER, "page", "Page number of the results", false);
     }
@@ -60,13 +60,25 @@ public class CheckUserCommand implements BotCommand {
                 .filter(o -> "COMPLETED".equals(o.getStatus()))
                 .collect(Collectors.toList());
 
+        EmbedBuilder embed = new EmbedBuilder()
+                .setTitle("Profile: " + targetUser.getName())
+                .setColor(targetDbUser.isBanned() ? Color.RED : Color.GREEN);
+
+        if (targetDbUser.getRobloxId() != null) {
+            embed.addField("Roblox Account", "✅ Linked\n**Username:** " + targetDbUser.getRobloxUsername() + "\n**ID:** " + targetDbUser.getRobloxId(), true);
+            if (targetDbUser.getRobloxAvatarUrl() != null && !targetDbUser.getRobloxAvatarUrl().isEmpty()) {
+                embed.setThumbnail(targetDbUser.getRobloxAvatarUrl());
+            }
+        } else {
+            embed.addField("Roblox Account", "❌ Not Linked", true);
+        }
+
+        embed.addField("Store Status", targetDbUser.isBanned() ? "⛔ Banned" : "🟢 Active", true);
+        embed.addField("Balance", "🪙 " + targetDbUser.getBalance() + " Robux", false);
+
         if (orders.isEmpty()) {
-            EmbedBuilder emptyEmbed = new EmbedBuilder()
-                    .setTitle("Profile: " + targetUser.getName())
-                    .setColor(Color.RED)
-                    .setDescription("No successful purchases found.")
-                    .addField("Balance", targetDbUser.getBalance() + " Robux", false);
-            event.replyEmbeds(emptyEmbed.build()).setEphemeral(false).queue();
+            embed.setDescription("**Purchased assets:**\nNo successful purchases found.");
+            event.replyEmbeds(embed.build()).setEphemeral(false).queue();
             return;
         }
 
@@ -77,11 +89,8 @@ public class CheckUserCommand implements BotCommand {
         int startIndex = (page - 1) * pageSize;
         int endIndex = Math.min(startIndex + pageSize, orders.size());
 
-        EmbedBuilder embed = new EmbedBuilder()
-                .setTitle("Profile: " + targetUser.getName())
-                .setColor(Color.GREEN)
-                .setDescription("**Balance:** " + targetDbUser.getBalance() + " Robux\n\n**Purchased assets:**")
-                .setFooter("Page " + page + " of " + totalPages + " • Use the 'page' option to navigate.");
+        embed.setDescription("**Purchased assets:**");
+        embed.setFooter("Page " + page + " of " + totalPages + " • Use the 'page' option to navigate.");
 
         for (int i = startIndex; i < endIndex; i++) {
             Order order = orders.get(i);
