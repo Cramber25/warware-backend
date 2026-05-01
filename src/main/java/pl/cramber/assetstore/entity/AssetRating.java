@@ -24,7 +24,7 @@ public class AssetRating {
     @JoinColumn(name = "asset_id", nullable = false)
     private Asset asset;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 

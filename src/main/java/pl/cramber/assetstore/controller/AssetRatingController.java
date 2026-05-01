@@ -63,6 +63,7 @@ public class AssetRatingController {
     }
 
     @GetMapping
+    @Transactional(readOnly = true)
     public ResponseEntity<Page<RatingResponse>> getRatings(
             @PathVariable UUID assetId,
             @RequestParam(defaultValue = "0") int page,
