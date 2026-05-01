@@ -58,7 +58,9 @@ public class SeoController {
         String safeDescription = HtmlUtils.htmlEscape(description);
         String safeImage = HtmlUtils.htmlEscape(asset.getThumbnailUrl() != null ? asset.getThumbnailUrl() : "");
 
-        return ResponseEntity.ok(injectMetaTags(html, safeTitle, safeDescription, safeImage));
+        String jsonLd = buildProductJsonLd(asset, safeDescription);
+
+        return ResponseEntity.ok(injectMetaTags(html, safeTitle, safeDescription, safeImage, jsonLd));
     }
 
     private String cleanMarkdown(String markdown) {
@@ -70,8 +72,47 @@ public class SeoController {
                 .trim();
     }
 
-    private String injectMetaTags(String html, String title, String description, String image) {
-        return html
+    private String buildProductJsonLd(Asset asset, String cleanDescription) {
+        String jsonTitle = asset.getTitle().replace("\"", "\\\"");
+        String priceString = String.valueOf(asset.getPrice());
+        String jsonImage = asset.getThumbnailUrl() != null ? asset.getThumbnailUrl() : "";
+
+        String enhancedDescription = cleanDescription + " | Price: " + priceString + " Robux.";
+        String jsonDesc = enhancedDescription.replace("\"", "\\\"");
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\n");
+        sb.append("  \"@context\": \"https://schema.org/\",\n");
+        sb.append("  \"@type\": \"Product\",\n");
+        sb.append("  \"name\": \"").append(jsonTitle).append("\",\n");
+        sb.append("  \"image\": \"").append(jsonImage).append("\",\n");
+        sb.append("  \"description\": \"").append(jsonDesc).append("\",\n");
+        sb.append("  \"offers\": {\n");
+        sb.append("    \"@type\": \"Offer\",\n");
+        sb.append("    \"price\": \"").append(priceString).append("\",\n");
+        sb.append("    \"availability\": \"https://schema.org/InStock\"\n");
+        sb.append("  }");
+
+        if (asset.getRatingCount() != null && asset.getRatingCount() > 0) {
+            sb.append(",\n  \"aggregateRating\": {\n");
+            sb.append("    \"@type\": \"AggregateRating\",\n");
+            sb.append("    \"ratingValue\": \"").append(Math.round(asset.getAverageRating() * 10.0) / 10.0).append("\",\n");
+            sb.append("    \"reviewCount\": \"").append(asset.getRatingCount()).append("\"\n");
+            sb.append("  }\n");
+        } else {
+            sb.append("\n");
+        }
+
+        sb.append("}");
+
+        return sb.toString();
+    }
+
+    private String injectMetaTags(String html, String title, String description, String image, String jsonLd) {
+
+        String jsonLdScript = "<script type=\"application/ld+json\">\n" + jsonLd + "\n</script>";
+
+        String injectedHtml = html
                 .replaceAll("<title>.*?</title>", Matcher.quoteReplacement("<title>" + title + "</title>"))
 
                 .replaceAll("<meta\\s+name=\"title\"\\s+content=\".*?\"\\s*/?>", Matcher.quoteReplacement("<meta name=\"title\" content=\"" + title + "\" />"))
@@ -84,5 +125,7 @@ public class SeoController {
                 .replaceAll("<meta\\s+property=\"twitter:title\"\\s+content=\".*?\"\\s*/?>", Matcher.quoteReplacement("<meta property=\"twitter:title\" content=\"" + title + "\" />"))
                 .replaceAll("<meta\\s+property=\"twitter:description\"\\s+content=\".*?\"\\s*/?>", Matcher.quoteReplacement("<meta property=\"twitter:description\" content=\"" + description + "\" />"))
                 .replaceAll("<meta\\s+property=\"twitter:image\"\\s+content=\".*?\"\\s*/?>", Matcher.quoteReplacement("<meta property=\"twitter:image\" content=\"" + image + "\" />"));
+
+        return injectedHtml.replaceFirst("</head>", Matcher.quoteReplacement(jsonLdScript + "\n</head>"));
     }
 }
