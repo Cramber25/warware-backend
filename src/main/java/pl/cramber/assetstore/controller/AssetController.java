@@ -26,13 +26,23 @@ public class AssetController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) UUID categoryId,
             @RequestParam(required = false) List<UUID> tagIds,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDirection,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
         String validSearch = (search != null) ? search : "";
         List<UUID> validTagIds = (tagIds != null && !tagIds.isEmpty()) ? tagIds : null;
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Sort.Direction direction = sortDirection.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
+
+        String validSortBy = switch (sortBy.toLowerCase()) {
+            case "price" -> "price";
+            case "title" -> "title";
+            default -> "createdAt";
+        };
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, validSortBy));
 
         return assetRepository.findPublicAssetsWithFilters(validSearch, categoryId, validTagIds, pageable)
                 .map(AssetSummaryDto::new);
