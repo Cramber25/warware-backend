@@ -7,10 +7,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.HtmlUtils;
 import pl.cramber.assetstore.entity.Asset;
 import pl.cramber.assetstore.repository.AssetRepository;
 
 import java.util.UUID;
+import java.util.regex.Matcher;
 
 @RestController
 @RequiredArgsConstructor
@@ -47,14 +49,16 @@ public class SeoController {
             return ResponseEntity.ok(html);
         }
 
-        String title = asset.getTitle();
         String description = cleanMarkdown(asset.getDescription());
         if (description.length() > 150) {
             description = description.substring(0, 147) + "...";
         }
-        String image = asset.getThumbnailUrl();
 
-        return ResponseEntity.ok(injectMetaTags(html, title, description, image));
+        String safeTitle = HtmlUtils.htmlEscape(asset.getTitle());
+        String safeDescription = HtmlUtils.htmlEscape(description);
+        String safeImage = HtmlUtils.htmlEscape(asset.getThumbnailUrl() != null ? asset.getThumbnailUrl() : "");
+
+        return ResponseEntity.ok(injectMetaTags(html, safeTitle, safeDescription, safeImage));
     }
 
     private String cleanMarkdown(String markdown) {
@@ -68,17 +72,17 @@ public class SeoController {
 
     private String injectMetaTags(String html, String title, String description, String image) {
         return html
-                .replaceAll("<title>.*?</title>", "<title>" + title + "</title>")
+                .replaceAll("<title>.*?</title>", Matcher.quoteReplacement("<title>" + title + "</title>"))
 
-                .replaceAll("<meta\\s+name=\"title\"\\s+content=\".*?\"\\s*/?>", "<meta name=\"title\" content=\"" + title + "\" />")
-                .replaceAll("<meta\\s+name=\"description\"\\s+content=\".*?\"\\s*/?>", "<meta name=\"description\" content=\"" + description + "\" />")
+                .replaceAll("<meta\\s+name=\"title\"\\s+content=\".*?\"\\s*/?>", Matcher.quoteReplacement("<meta name=\"title\" content=\"" + title + "\" />"))
+                .replaceAll("<meta\\s+name=\"description\"\\s+content=\".*?\"\\s*/?>", Matcher.quoteReplacement("<meta name=\"description\" content=\"" + description + "\" />"))
 
-                .replaceAll("<meta\\s+property=\"og:title\"\\s+content=\".*?\"\\s*/?>", "<meta property=\"og:title\" content=\"" + title + "\" />")
-                .replaceAll("<meta\\s+property=\"og:description\"\\s+content=\".*?\"\\s*/?>", "<meta property=\"og:description\" content=\"" + description + "\" />")
-                .replaceAll("<meta\\s+property=\"og:image\"\\s+content=\".*?\"\\s*/?>", "<meta property=\"og:image\" content=\"" + image + "\" />")
+                .replaceAll("<meta\\s+property=\"og:title\"\\s+content=\".*?\"\\s*/?>", Matcher.quoteReplacement("<meta property=\"og:title\" content=\"" + title + "\" />"))
+                .replaceAll("<meta\\s+property=\"og:description\"\\s+content=\".*?\"\\s*/?>", Matcher.quoteReplacement("<meta property=\"og:description\" content=\"" + description + "\" />"))
+                .replaceAll("<meta\\s+property=\"og:image\"\\s+content=\".*?\"\\s*/?>", Matcher.quoteReplacement("<meta property=\"og:image\" content=\"" + image + "\" />"))
 
-                .replaceAll("<meta\\s+property=\"twitter:title\"\\s+content=\".*?\"\\s*/?>", "<meta property=\"twitter:title\" content=\"" + title + "\" />")
-                .replaceAll("<meta\\s+property=\"twitter:description\"\\s+content=\".*?\"\\s*/?>", "<meta property=\"twitter:description\" content=\"" + description + "\" />")
-                .replaceAll("<meta\\s+property=\"twitter:image\"\\s+content=\".*?\"\\s*/?>", "<meta property=\"twitter:image\" content=\"" + image + "\" />");
+                .replaceAll("<meta\\s+property=\"twitter:title\"\\s+content=\".*?\"\\s*/?>", Matcher.quoteReplacement("<meta property=\"twitter:title\" content=\"" + title + "\" />"))
+                .replaceAll("<meta\\s+property=\"twitter:description\"\\s+content=\".*?\"\\s*/?>", Matcher.quoteReplacement("<meta property=\"twitter:description\" content=\"" + description + "\" />"))
+                .replaceAll("<meta\\s+property=\"twitter:image\"\\s+content=\".*?\"\\s*/?>", Matcher.quoteReplacement("<meta property=\"twitter:image\" content=\"" + image + "\" />"));
     }
 }

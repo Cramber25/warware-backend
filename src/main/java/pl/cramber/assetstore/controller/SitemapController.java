@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.RestController;
 import pl.cramber.assetstore.entity.Asset;
 import pl.cramber.assetstore.repository.AssetRepository;
 
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @RestController
@@ -39,10 +38,6 @@ public class SitemapController {
         for (Asset asset : publicAssets) {
             xml.append("  <url>\n");
             xml.append("    <loc>").append(frontendUrl).append("/asset/").append(asset.getId()).append("</loc>\n");
-
-            if (asset.getCreatedAt() != null) {
-                xml.append("    <lastmod>").append(asset.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE)).append("</lastmod>\n");
-            }
 
             xml.append("    <changefreq>weekly</changefreq>\n");
             xml.append("    <priority>0.8</priority>\n");
