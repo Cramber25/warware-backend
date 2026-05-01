@@ -10,7 +10,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import pl.cramber.assetstore.bot.commands.CommandManager;
-import pl.cramber.assetstore.bot.events.BotEventListener;
 
 import java.util.EnumSet;
 
