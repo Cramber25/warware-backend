@@ -101,12 +101,21 @@ public class RobloxLinkController {
             User user = userRepository.findByDiscordId(discordId).orElseThrow();
 
             Optional<User> existingRobloxUser = userRepository.findByRobloxId(robloxId);
-            if (existingRobloxUser.isPresent() && existingRobloxUser.get().isBanned()) {
-                user.setBanned(true);
-                userRepository.save(user);
-                return ResponseEntity.status(HttpStatus.FOUND)
-                        .location(URI.create(frontendUrl + "/?error=banned_roblox_account"))
-                        .build();
+
+            if (existingRobloxUser.isPresent()) {
+                if (existingRobloxUser.get().isBanned()) {
+                    user.setBanned(true);
+                    userRepository.save(user);
+                    return ResponseEntity.status(HttpStatus.FOUND)
+                            .location(URI.create(frontendUrl + "/"))
+                            .build();
+                }
+
+                if (!existingRobloxUser.get().getId().equals(user.getId())) {
+                    return ResponseEntity.status(HttpStatus.FOUND)
+                            .location(URI.create(frontendUrl + "/dashboard"))
+                            .build();
+                }
             }
 
             user.setRobloxId(robloxId);
