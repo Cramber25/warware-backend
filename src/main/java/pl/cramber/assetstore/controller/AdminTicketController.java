@@ -2,6 +2,10 @@ package pl.cramber.assetstore.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -39,13 +43,25 @@ public class AdminTicketController {
 
     @GetMapping
     @Transactional(readOnly = true)
-    public ResponseEntity<?> getTickets(@AuthenticationPrincipal OAuth2User principal) {
-        User admin = userRepository.findByDiscordId(principal.getAttribute("id")).orElseThrow();
-        var tickets = "SUPERADMIN".equals(admin.getRole())
-                ? ticketRepository.findAllByOrderByCreatedAtDesc()
-                : ticketRepository.findByOrderAssetCreatorIdOrderByCreatedAtDesc(admin.getId());
+    public ResponseEntity<Page<Map<String, Object>>> getTickets(
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir,
+            @AuthenticationPrincipal OAuth2User principal) {
 
-        var mapped = tickets.stream().map(this::mapTicketToDto).collect(Collectors.toList());
+        User admin = userRepository.findByDiscordId(principal.getAttribute("id")).orElseThrow();
+
+        String safeSearch = search == null ? "" : search;
+        Sort.Direction direction = sortDir.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+
+        Page<Ticket> tickets = "SUPERADMIN".equals(admin.getRole())
+                ? ticketRepository.searchTickets(safeSearch, pageable)
+                : ticketRepository.searchCreatorTickets(admin.getId(), safeSearch, pageable);
+
+        Page<Map<String, Object>> mapped = tickets.map(this::mapTicketToDto);
         return ResponseEntity.ok(mapped);
     }
 

@@ -2,6 +2,10 @@ package pl.cramber.assetstore.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -16,7 +20,6 @@ import pl.cramber.assetstore.service.R2Service;
 
 import java.time.ZonedDateTime;
 import java.util.HashSet;
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -42,8 +45,25 @@ public class AdminAssetController {
     }
 
     @GetMapping
-    public List<Asset> getAllAssets() {
-        return assetRepository.findAll();
+    @Transactional(readOnly = true)
+    public ResponseEntity<Page<Asset>> getAllAssets(
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir,
+            @AuthenticationPrincipal OAuth2User principal) {
+
+        User admin = userRepository.findByDiscordId(principal.getAttribute("id")).orElseThrow();
+        String safeSearch = search == null ? "" : search;
+        Sort.Direction direction = sortDir.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+
+        Page<Asset> assets = "SUPERADMIN".equals(admin.getRole())
+                ? assetRepository.searchAllAdmin(safeSearch, pageable)
+                : assetRepository.searchByCreatorIdAdmin(admin.getId(), safeSearch, pageable);
+
+        return ResponseEntity.ok(assets);
     }
 
     @GetMapping("/{id}")

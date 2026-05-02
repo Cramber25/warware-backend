@@ -31,6 +31,12 @@ public interface AssetRepository extends JpaRepository<Asset, UUID> {
             @Param("tagIds") List<UUID> tagIds,
             Pageable pageable);
 
+    @Query("SELECT a FROM Asset a WHERE LOWER(a.title) LIKE LOWER(CONCAT('%', :search, '%'))")
+    Page<Asset> searchAllAdmin(@Param("search") String search, Pageable pageable);
+
+    @Query("SELECT a FROM Asset a WHERE a.creator.id = :creatorId AND LOWER(a.title) LIKE LOWER(CONCAT('%', :search, '%'))")
+    Page<Asset> searchByCreatorIdAdmin(@Param("creatorId") UUID creatorId, @Param("search") String search, Pageable pageable);
+
     @Modifying
     @Query("UPDATE Asset a SET a.viewCount = a.viewCount + 1 WHERE a.id = :id")
     void incrementViewCount(@Param("id") UUID id);

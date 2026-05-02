@@ -2,6 +2,10 @@ package pl.cramber.assetstore.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -11,7 +15,6 @@ import pl.cramber.assetstore.dto.PromoCodeResponse;
 import pl.cramber.assetstore.entity.*;
 import pl.cramber.assetstore.repository.*;
 
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -31,18 +34,25 @@ public class AdminPromoCodeController {
 
     @GetMapping
     @Transactional(readOnly = true)
-    public ResponseEntity<List<PromoCodeResponse>> getPromoCodes(@AuthenticationPrincipal OAuth2User principal) {
+    public ResponseEntity<Page<PromoCodeResponse>> getPromoCodes(
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir,
+            @AuthenticationPrincipal OAuth2User principal) {
+
         User admin = userRepository.findByDiscordId(principal.getAttribute("id")).orElseThrow();
 
-        List<PromoCode> codes = "SUPERADMIN".equals(admin.getRole())
-                ? promoCodeRepository.findAll()
-                : promoCodeRepository.findByCreatorId(admin.getId());
+        String safeSearch = search == null ? "" : search;
+        Sort.Direction direction = sortDir.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
 
-        List<PromoCodeResponse> mappedCodes = codes.stream()
-                .filter(code -> !code.isArchived())
-                .map(code -> mapToDto(code, promoCodeUsageRepository.countByPromoCodeId(code.getId())))
-                .toList();
+        Page<PromoCode> codes = "SUPERADMIN".equals(admin.getRole())
+                ? promoCodeRepository.searchPromoCodes(safeSearch, pageable)
+                : promoCodeRepository.searchCreatorPromoCodes(admin.getId(), safeSearch, pageable);
 
+        Page<PromoCodeResponse> mappedCodes = codes.map(code -> mapToDto(code, promoCodeUsageRepository.countByPromoCodeId(code.getId())));
         return ResponseEntity.ok(mappedCodes);
     }
 
