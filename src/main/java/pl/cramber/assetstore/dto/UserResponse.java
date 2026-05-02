@@ -15,6 +15,7 @@ public record UserResponse(
         String role,
         Integer balance,
         boolean banned,
+        ZonedDateTime createdAt,
         List<LoginLogDto> recentLogins
 ) {
     public record LoginLogDto(String ipAddress, ZonedDateTime createdAt) {}
