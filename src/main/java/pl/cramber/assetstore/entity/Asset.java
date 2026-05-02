@@ -9,7 +9,10 @@ import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@Table(name = "assets")
+@Table(name = "assets", indexes = {
+        @Index(name = "idx_asset_visibility", columnList = "visibility"),
+        @Index(name = "idx_asset_creator", columnList = "creator_id")
+})
 @Getter
 @Setter
 @NoArgsConstructor

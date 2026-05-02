@@ -20,7 +20,7 @@ public class WalletService {
 
     @Transactional
     public void addFunds(String robloxId, Integer amount) {
-        User user = userRepository.findByRobloxId(robloxId)
+        User user = userRepository.findByRobloxIdForUpdate(robloxId)
                 .orElseThrow(() -> new RuntimeException("USER_NOT_FOUND"));
 
         user.setBalance(user.getBalance() + amount);

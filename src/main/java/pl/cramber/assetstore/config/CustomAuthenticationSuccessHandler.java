@@ -35,7 +35,7 @@ public class CustomAuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         String discordId = oAuth2User.getAttribute("id");
 
         userRepository.findByDiscordId(discordId).ifPresent(user -> {
-            String ipAddress = request.getHeader("X-Forwarded-For");
+            String ipAddress = request.getHeader("CF-Connecting-IP");
 
             if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
                 ipAddress = request.getRemoteAddr();
