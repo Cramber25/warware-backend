@@ -1,12 +1,12 @@
 package pl.cramber.assetstore.service;
 
-import lombok.RequiredArgsConstructor;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import pl.cramber.assetstore.bot.BotManager;
 import pl.cramber.assetstore.entity.ModerationLog;
@@ -16,13 +16,36 @@ import java.awt.Color;
 import java.util.Map;
 
 @Service
-@RequiredArgsConstructor
 @ConditionalOnProperty(name = "discord.bot.enabled", havingValue = "true")
 public class ModerationService {
 
     private final ModerationLogRepository moderationLogRepository;
     private final StoreSettingService storeSettingService;
     private final BotManager botManager;
+
+    public ModerationService(
+            ModerationLogRepository moderationLogRepository,
+            StoreSettingService storeSettingService,
+            @Lazy BotManager botManager) {
+        this.moderationLogRepository = moderationLogRepository;
+        this.storeSettingService = storeSettingService;
+        this.botManager = botManager;
+    }
+
+    public boolean canModerate(String executorRole, String targetRole) {
+        return getRoleWeight(executorRole) > getRoleWeight(targetRole);
+    }
+
+    private int getRoleWeight(String role) {
+        if (role == null) return 0;
+        return switch (role.toUpperCase()) {
+            case "SUPERADMIN" -> 100;
+            case "ADMIN" -> 80;
+            case "MODERATOR" -> 50;
+            case "TRUSTED" -> 10;
+            default -> 0;
+        };
+    }
 
     public void logAndNotify(User target, User moderator, String action, String reason, String duration) {
         ModerationLog log = ModerationLog.builder()
