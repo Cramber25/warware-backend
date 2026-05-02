@@ -12,6 +12,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 import pl.cramber.assetstore.entity.User;
+import pl.cramber.assetstore.repository.BlacklistEntryRepository;
 import pl.cramber.assetstore.repository.UserRepository;
 
 import java.net.URI;
@@ -26,6 +27,7 @@ public class RobloxLinkController {
 
     private final UserRepository userRepository;
     private final StringRedisTemplate redisTemplate;
+    private final BlacklistEntryRepository blacklistEntryRepository;
 
     @Value("${ROBLOX_CLIENT_ID:}")
     private String clientId;
@@ -101,6 +103,14 @@ public class RobloxLinkController {
             String discordId = principal.getAttribute("id");
 
             User user = userRepository.findByDiscordId(discordId).orElseThrow();
+
+            if (blacklistEntryRepository.existsByRobloxIdAndIsActiveTrue(robloxId)) {
+                user.setBanned(true);
+                userRepository.save(user);
+                return ResponseEntity.status(HttpStatus.FOUND)
+                        .location(URI.create(frontendUrl + "/dashboard?error=blacklisted"))
+                        .build();
+            }
 
             Optional<User> existingRobloxUser = userRepository.findByRobloxId(robloxId);
 

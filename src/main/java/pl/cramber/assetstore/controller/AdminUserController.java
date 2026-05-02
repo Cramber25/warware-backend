@@ -85,44 +85,6 @@ public class AdminUserController {
         return ResponseEntity.ok(mapToDto(savedUser));
     }
 
-    @PutMapping("/{userId}/ban")
-    @Transactional
-    public ResponseEntity<?> toggleBan(@PathVariable UUID userId, @RequestBody Map<String, Boolean> payload, @AuthenticationPrincipal OAuth2User principal) {
-        User user = userRepository.findById(userId).orElseThrow();
-        if ("SUPERADMIN".equals(user.getRole())) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Cannot ban a Superadmin."));
-        }
-
-        boolean banned = payload.get("banned");
-        user.setBanned(banned);
-        User savedUser = userRepository.save(user);
-
-        logAction(principal, banned ? "BAN_USER" : "UNBAN_USER", "Toggled ban for user " + user.getDiscordId());
-        return ResponseEntity.ok(mapToDto(savedUser));
-    }
-
-    @PostMapping("/blacklist")
-    @Transactional
-    public ResponseEntity<?> blacklistByPlatformId(@RequestBody Map<String, String> payload, @AuthenticationPrincipal OAuth2User principal) {
-        String platform = payload.get("platform");
-        String id = payload.get("id");
-
-        Runnable banLogic = () -> {
-            if ("DISCORD".equals(platform)) {
-                userRepository.findByDiscordId(id).ifPresentOrElse(u -> {
-                    if (!"SUPERADMIN".equals(u.getRole())) { u.setBanned(true); userRepository.save(u); }
-                }, () -> userRepository.save(User.builder().discordId(id).banned(true).build()));
-            } else if ("ROBLOX".equals(platform)) {
-                userRepository.findByRobloxId(id).ifPresentOrElse(u -> {
-                    if (!"SUPERADMIN".equals(u.getRole())) { u.setBanned(true); userRepository.save(u); }
-                }, () -> userRepository.save(User.builder().discordId("DUMMY_" + UUID.randomUUID()).robloxId(id).banned(true).build()));
-            }
-        };
-        banLogic.run();
-        logAction(principal, "BLACKLIST", "Blacklisted " + platform + " ID: " + id);
-        return ResponseEntity.ok().build();
-    }
-
     @PostMapping("/{userId}/grant")
     public ResponseEntity<?> grantAsset(@PathVariable UUID userId, @RequestBody Map<String, String> payload, @AuthenticationPrincipal OAuth2User principal) {
         UUID assetId = UUID.fromString(payload.get("assetId"));
