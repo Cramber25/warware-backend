@@ -108,7 +108,6 @@ public class CheckUserCommand implements BotCommand {
             return;
         }
 
-        embed.setDescription("**Purchased assets:**");
         embed.setFooter("Page " + (page + 1) + " of " + Math.max(1, ordersPage.getTotalPages()));
 
         for (Order order : ordersPage.getContent()) {
