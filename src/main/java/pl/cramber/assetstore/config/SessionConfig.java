@@ -2,10 +2,10 @@ package pl.cramber.assetstore.config;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.session.jdbc.config.annotation.web.http.EnableJdbcHttpSession;
+import org.springframework.session.data.redis.config.annotation.web.http.EnableRedisHttpSession;
 
 @Configuration
-@EnableJdbcHttpSession(maxInactiveIntervalInSeconds = 604800)
+@EnableRedisHttpSession(maxInactiveIntervalInSeconds = 604800)
 @ConditionalOnProperty(name = "discord.bot.enabled", havingValue = "false", matchIfMissing = true)
 public class SessionConfig {
 }

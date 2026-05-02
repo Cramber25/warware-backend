@@ -11,6 +11,7 @@ import pl.cramber.assetstore.entity.AuditLog;
 import pl.cramber.assetstore.entity.StoreSetting;
 import pl.cramber.assetstore.repository.AuditLogRepository;
 import pl.cramber.assetstore.repository.StoreSettingRepository;
+import pl.cramber.assetstore.service.StoreSettingService;
 
 import java.util.List;
 import java.util.Map;
@@ -22,6 +23,7 @@ import java.util.Map;
 public class StoreSettingController {
 
     private final StoreSettingRepository storeSettingRepository;
+    private final StoreSettingService storeSettingService;
     private final AuditLogRepository auditLogRepository;
 
     @GetMapping
@@ -54,6 +56,8 @@ public class StoreSettingController {
 
         setting.setSettingValue(value);
         storeSettingRepository.save(setting);
+
+        storeSettingService.evictSettingsCache();
 
         auditLogRepository.save(AuditLog.builder()
                 .adminDiscordId(principal.getAttribute("id"))

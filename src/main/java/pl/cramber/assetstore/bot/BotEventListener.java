@@ -17,14 +17,12 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
-import pl.cramber.assetstore.entity.StoreSetting;
-import pl.cramber.assetstore.repository.StoreSettingRepository;
 import pl.cramber.assetstore.repository.UserRepository;
+import pl.cramber.assetstore.service.StoreSettingService;
 
 import java.awt.Color;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -33,7 +31,7 @@ import java.util.stream.Collectors;
 public class BotEventListener extends ListenerAdapter {
 
     private final UserRepository userRepository;
-    private final StoreSettingRepository storeSettingRepository;
+    private final StoreSettingService storeSettingService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Data
@@ -71,9 +69,7 @@ public class BotEventListener extends ListenerAdapter {
             if (member == null) return;
 
             Optional<pl.cramber.assetstore.entity.User> userOpt = userRepository.findByDiscordId(discordId);
-
-            Map<String, String> settings = storeSettingRepository.findAll().stream()
-                    .collect(Collectors.toMap(StoreSetting::getSettingKey, StoreSetting::getSettingValue, (a, b) -> a));
+            Map<String, String> settings = storeSettingService.getAllSettings();
 
             String verifiedRoleId = settings.get("DISCORD_VERIFIED_ROLE_ID");
             String unverifiedRoleId = settings.get("DISCORD_UNVERIFIED_ROLE_ID");
@@ -118,9 +114,7 @@ public class BotEventListener extends ListenerAdapter {
     public void onGuildMemberRemove(GuildMemberRemoveEvent event) {
         try {
             Guild guild = event.getGuild();
-
-            Map<String, String> settings = storeSettingRepository.findAll().stream()
-                    .collect(Collectors.toMap(StoreSetting::getSettingKey, StoreSetting::getSettingValue, (a, b) -> a));
+            Map<String, String> settings = storeSettingService.getAllSettings();
 
             String leaveChannelId = settings.get("DISCORD_LEAVE_CHANNEL_ID");
             String leaveMessage = settings.get("DISCORD_LEAVE_MESSAGE");

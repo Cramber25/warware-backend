@@ -1,5 +1,7 @@
 package pl.cramber.assetstore.repository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -15,6 +17,9 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     @EntityGraph(attributePaths = {"asset"})
     List<Order> findWithAssetByUserId(UUID userId);
+
+    @EntityGraph(attributePaths = {"asset"})
+    Page<Order> findByUserIdAndStatusOrderByCreatedAtDesc(UUID userId, String status, Pageable pageable);
 
     Optional<Order> findByUserIdAndAssetIdAndStatusNot(UUID userId, UUID assetId, String status);
     List<Order> findAllByOrderTypeOrderByCreatedAtDesc(String orderType);

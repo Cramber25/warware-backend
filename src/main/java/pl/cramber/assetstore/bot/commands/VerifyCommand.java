@@ -2,22 +2,23 @@ package pl.cramber.assetstore.bot.commands;
 
 import lombok.RequiredArgsConstructor;
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.components.actionrow.ActionRow;
+import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
-import pl.cramber.assetstore.entity.StoreSetting;
-import pl.cramber.assetstore.repository.StoreSettingRepository;
 import pl.cramber.assetstore.repository.UserRepository;
+import pl.cramber.assetstore.service.StoreSettingService;
 
 import java.awt.Color;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Component
 @ConditionalOnProperty(name = "discord.bot.enabled", havingValue = "true")
@@ -25,7 +26,10 @@ import java.util.stream.Collectors;
 public class VerifyCommand implements BotCommand {
 
     private final UserRepository userRepository;
-    private final StoreSettingRepository storeSettingRepository;
+    private final StoreSettingService storeSettingService;
+
+    @Value("${FRONTEND_URL:http://localhost:5173}")
+    private String frontendUrl;
 
     @Override
     public SlashCommandData getCommandData() {
@@ -35,29 +39,57 @@ public class VerifyCommand implements BotCommand {
     @Override
     public void execute(SlashCommandInteractionEvent event) {
         String discordId = event.getUser().getId();
+        Guild guild = event.getGuild();
+        Member member = event.getMember();
+
+        if (guild == null || member == null) {
+            event.reply("This command can only be used within a server.").setEphemeral(true).queue();
+            return;
+        }
+
+        Map<String, String> settings = storeSettingService.getAllSettings();
+        String verifiedRoleId = settings.get("DISCORD_VERIFIED_ROLE_ID");
+        String unverifiedRoleId = settings.get("DISCORD_UNVERIFIED_ROLE_ID");
+
+        boolean isVerified = false;
+        boolean hasUnverifiedRole = false;
+
+        if (verifiedRoleId != null && !verifiedRoleId.isEmpty()) {
+            Role vr = guild.getRoleById(verifiedRoleId);
+            if (vr != null && member.getRoles().contains(vr)) isVerified = true;
+        }
+
+        if (unverifiedRoleId != null && !unverifiedRoleId.isEmpty()) {
+            Role ur = guild.getRoleById(unverifiedRoleId);
+            if (ur != null && member.getRoles().contains(ur)) hasUnverifiedRole = true;
+        }
+
         Optional<pl.cramber.assetstore.entity.User> dbUserOpt = userRepository.findByDiscordId(discordId);
 
-        if (dbUserOpt.isEmpty() || dbUserOpt.get().getRobloxId() == null) {
-            event.reply("You haven't linked your Roblox account yet. Please visit our website to verify.")
-                    .setEphemeral(false)
+        if (dbUserOpt.isEmpty()) {
+            event.reply("You are not registered in our database. Please log in on our website first to link your account.")
+                    .setComponents(ActionRow.of(Button.link(frontendUrl, "Log In")))
+                    .setEphemeral(true)
                     .queue();
             return;
         }
 
         pl.cramber.assetstore.entity.User dbUser = dbUserOpt.get();
-        Guild guild = event.getGuild();
-        Member member = event.getMember();
 
-        if (guild == null || member == null) {
-            event.reply("This command can only be used within a server.").setEphemeral(false).queue();
+        if (dbUser.getRobloxId() == null) {
+            event.reply("You haven't linked your Roblox account yet. Please visit your dashboard to connect it.")
+                    .setComponents(ActionRow.of(Button.link(frontendUrl + "/dashboard", "Link Roblox")))
+                    .setEphemeral(true)
+                    .queue();
             return;
         }
 
-        Map<String, String> settings = storeSettingRepository.findAll().stream()
-                .collect(Collectors.toMap(StoreSetting::getSettingKey, StoreSetting::getSettingValue));
-
-        String verifiedRoleId = settings.get("DISCORD_VERIFIED_ROLE_ID");
-        String unverifiedRoleId = settings.get("DISCORD_UNVERIFIED_ROLE_ID");
+        if (isVerified && !hasUnverifiedRole) {
+            event.reply("You are already fully verified and your roles are up to date!")
+                    .setEphemeral(true)
+                    .queue();
+            return;
+        }
 
         EmbedBuilder embed = new EmbedBuilder()
                 .setTitle("Verification Sync")
@@ -88,6 +120,6 @@ public class VerifyCommand implements BotCommand {
             );
         } catch (Exception ignored) {}
 
-        event.replyEmbeds(embed.build()).setEphemeral(false).queue();
+        event.replyEmbeds(embed.build()).setEphemeral(true).queue();
     }
 }

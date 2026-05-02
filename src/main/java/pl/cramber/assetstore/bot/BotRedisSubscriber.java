@@ -8,12 +8,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.stereotype.Component;
-import pl.cramber.assetstore.entity.StoreSetting;
-import pl.cramber.assetstore.repository.StoreSettingRepository;
+import pl.cramber.assetstore.service.StoreSettingService;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -22,7 +20,7 @@ import java.util.stream.Collectors;
 public class BotRedisSubscriber implements MessageListener {
 
     private final BotManager botManager;
-    private final StoreSettingRepository storeSettingRepository;
+    private final StoreSettingService storeSettingService;
 
     @Override
     public void onMessage(Message message, byte[] pattern) {
@@ -36,8 +34,7 @@ public class BotRedisSubscriber implements MessageListener {
             String discordId = parts[0].trim();
             String robloxUsername = parts[1].trim();
 
-            Map<String, String> settings = storeSettingRepository.findAll().stream()
-                    .collect(Collectors.toMap(StoreSetting::getSettingKey, StoreSetting::getSettingValue));
+            Map<String, String> settings = storeSettingService.getAllSettings();
 
             String guildId = settings.get("DISCORD_GUILD_ID");
             if (guildId == null || guildId.isEmpty() || botManager.getJda() == null) return;
