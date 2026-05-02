@@ -96,33 +96,4 @@ public class AdminBlacklistController {
 
         return ResponseEntity.ok(blacklistEntryRepository.save(entry));
     }
-
-    @DeleteMapping("/{id}")
-    @Transactional
-    public ResponseEntity<Void> deleteBlacklist(@PathVariable UUID id, @AuthenticationPrincipal OAuth2User principal) {
-        String authorities = principal.getAuthorities().toString();
-        if (!authorities.contains("ROLE_SUPERADMIN")) {
-            return ResponseEntity.status(403).build();
-        }
-
-        BlacklistEntry entry = blacklistEntryRepository.findById(id).orElseThrow();
-        entry.setActive(false);
-        blacklistEntryRepository.save(entry);
-
-        if (entry.getDiscordId() != null && !entry.getDiscordId().isEmpty()) {
-            userRepository.findByDiscordId(entry.getDiscordId()).ifPresent(u -> {
-                u.setBanned(false);
-                userRepository.save(u);
-            });
-        }
-
-        if (entry.getRobloxId() != null && !entry.getRobloxId().isEmpty()) {
-            userRepository.findByRobloxId(entry.getRobloxId()).ifPresent(u -> {
-                u.setBanned(false);
-                userRepository.save(u);
-            });
-        }
-
-        return ResponseEntity.ok().build();
-    }
 }
