@@ -66,38 +66,54 @@ public class BlacklistCommand implements BotCommand {
             return;
         }
 
-        event.getGuild().ban(targetUser, 0, TimeUnit.DAYS).reason(reason).queue(
-                success -> {
-                    Optional<pl.cramber.assetstore.entity.User> dbUserOpt = userRepository.findByDiscordId(targetUser.getId());
-                    String robloxId = null;
-                    String robloxUsername = null;
+        EmbedBuilder publicReply = new EmbedBuilder()
+                .setColor(Color.RED)
+                .setDescription("Successfully blacklisted and banned " + targetUser.getAsMention() + ".");
+        event.replyEmbeds(publicReply.build()).queue();
 
-                    if (dbUserOpt.isPresent()) {
-                        pl.cramber.assetstore.entity.User dbUser = dbUserOpt.get();
-                        robloxId = dbUser.getRobloxId();
-                        robloxUsername = dbUser.getRobloxUsername();
-                        dbUser.setBanned(true);
-                        userRepository.save(dbUser);
-                    }
+        EmbedBuilder dmEmbed = new EmbedBuilder()
+                .setTitle("Moderation Notice")
+                .setColor(Color.RED)
+                .addField("Action", "BLACKLIST (BAN)", true)
+                .addField("Reason", reason, false)
+                .addField("Duration", "PERMANENT", true);
 
-                    BlacklistEntry entry = BlacklistEntry.builder()
-                            .discordId(targetUser.getId())
-                            .robloxId(robloxId)
-                            .robloxUsername(robloxUsername)
-                            .reason(reason)
-                            .adminDiscordId(executorId)
-                            .isActive(true)
-                            .build();
-                    blacklistEntryRepository.save(entry);
+        Runnable executeBanAndLog = () -> {
+            event.getGuild().ban(targetUser, 0, TimeUnit.DAYS).reason(reason).queue(
+                    success -> saveAndLog(event, targetUser, executorId, reason),
+                    error -> saveAndLog(event, targetUser, executorId, reason)
+            );
+        };
 
-                    moderationService.logAndNotify(targetUser, event.getUser(), "BLACKLIST (BAN)", reason, "PERMANENT");
-
-                    EmbedBuilder embed = new EmbedBuilder()
-                            .setColor(Color.RED)
-                            .setDescription("Successfully blacklisted and banned " + targetUser.getAsMention() + ".");
-                    event.replyEmbeds(embed.build()).queue();
-                },
-                error -> event.reply("Failed to ban user. Check my role hierarchy.").setEphemeral(true).queue()
+        targetUser.openPrivateChannel().queue(
+                ch -> ch.sendMessageEmbeds(dmEmbed.build()).queue(s -> executeBanAndLog.run(), e -> executeBanAndLog.run()),
+                e -> executeBanAndLog.run()
         );
+    }
+
+    private void saveAndLog(SlashCommandInteractionEvent event, User targetUser, String executorId, String reason) {
+        Optional<pl.cramber.assetstore.entity.User> dbUserOpt = userRepository.findByDiscordId(targetUser.getId());
+        String robloxId = null;
+        String robloxUsername = null;
+
+        if (dbUserOpt.isPresent()) {
+            pl.cramber.assetstore.entity.User dbUser = dbUserOpt.get();
+            robloxId = dbUser.getRobloxId();
+            robloxUsername = dbUser.getRobloxUsername();
+            dbUser.setBanned(true);
+            userRepository.save(dbUser);
+        }
+
+        BlacklistEntry entry = BlacklistEntry.builder()
+                .discordId(targetUser.getId())
+                .robloxId(robloxId)
+                .robloxUsername(robloxUsername)
+                .reason(reason)
+                .adminDiscordId(executorId)
+                .isActive(true)
+                .build();
+        blacklistEntryRepository.save(entry);
+
+        moderationService.logWithoutDM(targetUser.getId(), targetUser.getName(), targetUser.getAsMention(), event.getUser(), "BLACKLIST (BAN)", reason, "PERMANENT");
     }
 }

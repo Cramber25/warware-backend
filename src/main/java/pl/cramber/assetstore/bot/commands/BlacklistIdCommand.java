@@ -59,8 +59,52 @@ public class BlacklistIdCommand implements BotCommand {
         String discordId = providedDiscordId != null ? providedDiscordId : dbUserOpt.map(pl.cramber.assetstore.entity.User::getDiscordId).orElse(null);
         String robloxUsername = dbUserOpt.map(pl.cramber.assetstore.entity.User::getRobloxUsername).orElse(null);
 
+        String finalDiscordId = (discordId != null && !discordId.startsWith("DUMMY_")) ? discordId : null;
+
+        EmbedBuilder replyEmbed = new EmbedBuilder().setColor(Color.RED);
+        if (finalDiscordId != null) {
+            replyEmbed.setDescription("Successfully blacklisted Roblox ID `" + robloxId + "` and banned Discord ID `<@" + finalDiscordId + ">`.");
+        } else {
+            replyEmbed.setDescription("Successfully blacklisted Roblox ID `" + robloxId + "`. No linked Discord account found.");
+        }
+        event.replyEmbeds(replyEmbed.build()).queue();
+
+        Runnable executeBanAndLog = () -> {
+            if (finalDiscordId != null) {
+                event.getGuild().ban(UserSnowflake.fromId(finalDiscordId), 0, TimeUnit.DAYS).reason(reason).queue(
+                        success -> saveAndLog(event, finalDiscordId, robloxId, robloxUsername, executorId, reason, dbUserOpt),
+                        error -> saveAndLog(event, finalDiscordId, robloxId, robloxUsername, executorId, reason, dbUserOpt)
+                );
+            } else {
+                saveAndLog(event, null, robloxId, robloxUsername, executorId, reason, dbUserOpt);
+            }
+        };
+
+        if (finalDiscordId != null) {
+            event.getJDA().retrieveUserById(finalDiscordId).queue(
+                    user -> {
+                        EmbedBuilder dmEmbed = new EmbedBuilder()
+                                .setTitle("Moderation Notice")
+                                .setColor(Color.RED)
+                                .addField("Action", "BLACKLIST (BAN)", true)
+                                .addField("Reason", reason, false)
+                                .addField("Duration", "PERMANENT", true);
+
+                        user.openPrivateChannel().queue(
+                                ch -> ch.sendMessageEmbeds(dmEmbed.build()).queue(s -> executeBanAndLog.run(), e -> executeBanAndLog.run()),
+                                e -> executeBanAndLog.run()
+                        );
+                    },
+                    e -> executeBanAndLog.run()
+            );
+        } else {
+            executeBanAndLog.run();
+        }
+    }
+
+    private void saveAndLog(SlashCommandInteractionEvent event, String finalDiscordId, String robloxId, String robloxUsername, String executorId, String reason, Optional<pl.cramber.assetstore.entity.User> dbUserOpt) {
         BlacklistEntry entry = BlacklistEntry.builder()
-                .discordId(discordId != null && !discordId.startsWith("DUMMY_") ? discordId : null)
+                .discordId(finalDiscordId)
                 .robloxId(robloxId)
                 .robloxUsername(robloxUsername)
                 .reason(reason)
@@ -75,28 +119,10 @@ public class BlacklistIdCommand implements BotCommand {
             userRepository.save(dbUser);
         }
 
-        String targetId = discordId != null ? discordId : robloxId;
+        String targetId = finalDiscordId != null ? finalDiscordId : robloxId;
         String targetName = robloxUsername != null ? robloxUsername : "Unknown";
-        String targetMention = discordId != null && !discordId.startsWith("DUMMY_") ? "<@" + discordId + ">" : "Roblox ID: " + robloxId;
+        String targetMention = finalDiscordId != null ? "<@" + finalDiscordId + ">" : "Roblox ID: " + robloxId;
 
         moderationService.logWithoutDM(targetId, targetName, targetMention, event.getUser(), "BLACKLIST (BAN)", reason, "PERMANENT");
-
-        EmbedBuilder embed = new EmbedBuilder().setColor(Color.RED);
-
-        if (discordId != null && !discordId.startsWith("DUMMY_")) {
-            event.getGuild().ban(UserSnowflake.fromId(discordId), 0, TimeUnit.DAYS).reason(reason).queue(
-                    success -> {
-                        embed.setDescription("Successfully blacklisted Roblox ID `" + robloxId + "` and banned Discord ID `<@" + discordId + ">`.");
-                        event.replyEmbeds(embed.build()).queue();
-                    },
-                    error -> {
-                        embed.setDescription("Successfully blacklisted Roblox ID `" + robloxId + "`, but failed to ban Discord ID `<@" + discordId + ">`.");
-                        event.replyEmbeds(embed.build()).queue();
-                    }
-            );
-        } else {
-            embed.setDescription("Successfully blacklisted Roblox ID `" + robloxId + "`. No linked Discord account found.");
-            event.replyEmbeds(embed.build()).queue();
-        }
     }
 }
