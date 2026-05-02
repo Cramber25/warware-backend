@@ -43,7 +43,7 @@ public class VerifyCommand implements BotCommand {
         Member member = event.getMember();
 
         if (guild == null || member == null) {
-            event.reply("This command can only be used within a server.").setEphemeral(true).queue();
+            event.reply("This command can only be used within a server.").setEphemeral(false).queue();
             return;
         }
 
@@ -69,7 +69,7 @@ public class VerifyCommand implements BotCommand {
         if (dbUserOpt.isEmpty()) {
             event.reply("You are not registered in our database. Please log in on our website first to link your account.")
                     .setComponents(ActionRow.of(Button.link(frontendUrl, "Log In")))
-                    .setEphemeral(true)
+                    .setEphemeral(false)
                     .queue();
             return;
         }
@@ -79,14 +79,14 @@ public class VerifyCommand implements BotCommand {
         if (dbUser.getRobloxId() == null) {
             event.reply("You haven't linked your Roblox account yet. Please visit your dashboard to connect it.")
                     .setComponents(ActionRow.of(Button.link(frontendUrl + "/dashboard", "Link Roblox")))
-                    .setEphemeral(true)
+                    .setEphemeral(false)
                     .queue();
             return;
         }
 
         if (isVerified && !hasUnverifiedRole) {
             event.reply("You are already fully verified and your roles are up to date!")
-                    .setEphemeral(true)
+                    .setEphemeral(false)
                     .queue();
             return;
         }
@@ -120,6 +120,6 @@ public class VerifyCommand implements BotCommand {
             );
         } catch (Exception ignored) {}
 
-        event.replyEmbeds(embed.build()).setEphemeral(true).queue();
+        event.replyEmbeds(embed.build()).setEphemeral(false).queue();
     }
 }
