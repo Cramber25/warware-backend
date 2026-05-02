@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import pl.cramber.assetstore.entity.BlacklistEntry;
 import pl.cramber.assetstore.repository.BlacklistEntryRepository;
 import pl.cramber.assetstore.repository.UserRepository;
+import pl.cramber.assetstore.service.ModerationService;
 
 import java.awt.Color;
 import java.util.Optional;
@@ -23,6 +24,7 @@ public class RemoveBlacklistCommand implements BotCommand {
 
     private final UserRepository userRepository;
     private final BlacklistEntryRepository blacklistEntryRepository;
+    private final ModerationService moderationService;
 
     @Override
     public SlashCommandData getCommandData() {
@@ -80,6 +82,12 @@ public class RemoveBlacklistCommand implements BotCommand {
                 userRepository.save(u);
             });
         }
+
+        String targetId = entry.getDiscordId() != null ? entry.getDiscordId() : entry.getRobloxId();
+        String targetName = entry.getRobloxUsername() != null ? entry.getRobloxUsername() : "Unknown";
+        String targetMention = entry.getDiscordId() != null && !entry.getDiscordId().startsWith("DUMMY_") ? "<@" + entry.getDiscordId() + ">" : "Roblox ID: " + entry.getRobloxId();
+
+        moderationService.logWithoutDM(targetId, targetName, targetMention, event.getUser(), "REMOVE BLACKLIST (UNBAN)", "Blacklist revoked.", null);
 
         EmbedBuilder embed = new EmbedBuilder()
                 .setColor(Color.GREEN)

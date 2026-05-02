@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import pl.cramber.assetstore.entity.BlacklistEntry;
 import pl.cramber.assetstore.repository.BlacklistEntryRepository;
 import pl.cramber.assetstore.repository.UserRepository;
+import pl.cramber.assetstore.service.ModerationService;
 
 import java.awt.Color;
 import java.util.Optional;
@@ -24,6 +25,7 @@ public class BlacklistIdCommand implements BotCommand {
 
     private final UserRepository userRepository;
     private final BlacklistEntryRepository blacklistEntryRepository;
+    private final ModerationService moderationService;
 
     @Override
     public SlashCommandData getCommandData() {
@@ -72,6 +74,12 @@ public class BlacklistIdCommand implements BotCommand {
             dbUser.setBanned(true);
             userRepository.save(dbUser);
         }
+
+        String targetId = discordId != null ? discordId : robloxId;
+        String targetName = robloxUsername != null ? robloxUsername : "Unknown";
+        String targetMention = discordId != null && !discordId.startsWith("DUMMY_") ? "<@" + discordId + ">" : "Roblox ID: " + robloxId;
+
+        moderationService.logWithoutDM(targetId, targetName, targetMention, event.getUser(), "BLACKLIST (BAN)", reason, "PERMANENT");
 
         EmbedBuilder embed = new EmbedBuilder().setColor(Color.RED);
 

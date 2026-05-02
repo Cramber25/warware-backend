@@ -24,4 +24,9 @@ public interface BlacklistEntryRepository extends JpaRepository<BlacklistEntry, 
             "OR LOWER(b.discordId) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(b.reason) LIKE LOWER(CONCAT('%', :search, '%'))")
     Page<BlacklistEntry> searchBlacklists(@Param("search") String search, Pageable pageable);
+
+    @Query("SELECT b FROM BlacklistEntry b WHERE b.isActive = true AND (LOWER(b.robloxUsername) LIKE LOWER(CONCAT('%', :search, '%')) " +
+            "OR LOWER(b.discordId) LIKE LOWER(CONCAT('%', :search, '%')) " +
+            "OR LOWER(b.reason) LIKE LOWER(CONCAT('%', :search, '%')))")
+    Page<BlacklistEntry> searchActiveBlacklists(@Param("search") String search, Pageable pageable);
 }

@@ -34,6 +34,6 @@ public class BlacklistController {
         Sort.Direction direction = sortDir.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
 
-        return ResponseEntity.ok(blacklistEntryRepository.searchBlacklists(safeSearch, pageable));
+        return ResponseEntity.ok(blacklistEntryRepository.searchActiveBlacklists(safeSearch, pageable));
     }
 }

@@ -73,6 +73,24 @@ public class ModerationService {
                 err -> {}
         );
 
+        sendLogToChannel(target.getAsMention() + " (`" + target.getId() + "`)", moderator, action, reason, duration);
+    }
+
+    public void logWithoutDM(String targetId, String targetName, String targetMention, User moderator, String action, String reason, String duration) {
+        ModerationLog log = ModerationLog.builder()
+                .targetDiscordId(targetId)
+                .targetDiscordUsername(targetName)
+                .moderatorDiscordId(moderator.getId())
+                .action(action)
+                .reason(reason)
+                .duration(duration)
+                .build();
+        moderationLogRepository.save(log);
+
+        sendLogToChannel(targetMention + " (`" + targetId + "`)", moderator, action, reason, duration);
+    }
+
+    private void sendLogToChannel(String targetFormatted, User moderator, String action, String reason, String duration) {
         Map<String, String> settings = storeSettingService.getAllSettings();
         String logChannelId = settings.get("DISCORD_MOD_LOG_CHANNEL_ID");
         String guildId = settings.get("DISCORD_GUILD_ID");
@@ -87,7 +105,7 @@ public class ModerationService {
                         EmbedBuilder logEmbed = new EmbedBuilder()
                                 .setTitle("Moderation Action: " + action)
                                 .setColor(Color.ORANGE)
-                                .addField("Target", target.getAsMention() + " (`" + target.getId() + "`)", true)
+                                .addField("Target", targetFormatted, true)
                                 .addField("Moderator", moderator.getAsMention(), true)
                                 .addField("Reason", reason != null ? reason : "No reason provided", false);
 
