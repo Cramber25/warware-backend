@@ -161,6 +161,7 @@ public class AdminUserController {
                 user.getRole(),
                 user.getBalance(),
                 user.isBanned(),
+                user.getCreatedAt(),
                 recentLogins
         );
     }
