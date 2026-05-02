@@ -1,6 +1,7 @@
 package pl.cramber.assetstore.bot.commands;
 
 import lombok.RequiredArgsConstructor;
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Component;
 import pl.cramber.assetstore.repository.UserRepository;
 import pl.cramber.assetstore.service.ModerationService;
 
+import java.awt.Color;
 import java.util.Optional;
 
 @Component
@@ -60,7 +62,11 @@ public class KickCommand implements BotCommand {
         event.getGuild().kick(targetMember).reason(reason).queue(
                 success -> {
                     moderationService.logAndNotify(targetMember.getUser(), event.getUser(), "KICK", reason, null);
-                    event.reply("Successfully kicked " + targetMember.getAsMention() + ".").setEphemeral(true).queue();
+
+                    EmbedBuilder embed = new EmbedBuilder()
+                            .setColor(Color.RED)
+                            .setDescription("Successfully kicked " + targetMember.getAsMention() + ".");
+                    event.replyEmbeds(embed.build()).queue();
                 },
                 error -> event.reply("Failed to kick user. Check my role hierarchy and permissions.").setEphemeral(true).queue()
         );

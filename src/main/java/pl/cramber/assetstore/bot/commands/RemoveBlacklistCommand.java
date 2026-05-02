@@ -1,7 +1,7 @@
 package pl.cramber.assetstore.bot.commands;
 
 import lombok.RequiredArgsConstructor;
-import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.UserSnowflake;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
@@ -13,6 +13,7 @@ import pl.cramber.assetstore.entity.BlacklistEntry;
 import pl.cramber.assetstore.repository.BlacklistEntryRepository;
 import pl.cramber.assetstore.repository.UserRepository;
 
+import java.awt.Color;
 import java.util.Optional;
 
 @Component
@@ -26,7 +27,7 @@ public class RemoveBlacklistCommand implements BotCommand {
     @Override
     public SlashCommandData getCommandData() {
         return Commands.slash("remove_blacklist", "Removes a user from the active blacklist but keeps the history.")
-                .addOption(OptionType.USER, "user", "Select user", false)
+                .addOption(OptionType.STRING, "discord_id", "Discord User ID", false)
                 .addOption(OptionType.STRING, "roblox_id", "Or provide Roblox ID", false);
     }
 
@@ -40,19 +41,19 @@ public class RemoveBlacklistCommand implements BotCommand {
             return;
         }
 
-        User targetUser = event.getOption("user") != null ? event.getOption("user").getAsUser() : null;
+        String discordId = event.getOption("discord_id") != null ? event.getOption("discord_id").getAsString() : null;
         String robloxId = event.getOption("roblox_id") != null ? event.getOption("roblox_id").getAsString() : null;
 
-        if (targetUser == null && robloxId == null) {
-            event.reply("You must provide either a Discord user or a Roblox ID.").setEphemeral(true).queue();
+        if (discordId == null && robloxId == null) {
+            event.reply("You must provide either a Discord ID or a Roblox ID.").setEphemeral(true).queue();
             return;
         }
 
         Optional<BlacklistEntry> entryOpt = Optional.empty();
 
-        if (targetUser != null) {
-            entryOpt = blacklistEntryRepository.findByDiscordIdAndIsActiveTrue(targetUser.getId());
-        } else if (robloxId != null) {
+        if (discordId != null) {
+            entryOpt = blacklistEntryRepository.findByDiscordIdAndIsActiveTrue(discordId);
+        } else {
             entryOpt = blacklistEntryRepository.findByRobloxIdAndIsActiveTrue(robloxId);
         }
 
@@ -80,6 +81,9 @@ public class RemoveBlacklistCommand implements BotCommand {
             });
         }
 
-        event.reply("Successfully removed the active blacklist. The entry has been archived for history.").setEphemeral(true).queue();
+        EmbedBuilder embed = new EmbedBuilder()
+                .setColor(Color.GREEN)
+                .setDescription("Successfully removed the active blacklist. The entry has been archived for history.");
+        event.replyEmbeds(embed.build()).queue();
     }
 }

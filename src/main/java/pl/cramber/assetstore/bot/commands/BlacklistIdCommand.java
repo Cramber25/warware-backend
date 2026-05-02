@@ -1,6 +1,7 @@
 package pl.cramber.assetstore.bot.commands;
 
 import lombok.RequiredArgsConstructor;
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.UserSnowflake;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
@@ -12,6 +13,7 @@ import pl.cramber.assetstore.entity.BlacklistEntry;
 import pl.cramber.assetstore.repository.BlacklistEntryRepository;
 import pl.cramber.assetstore.repository.UserRepository;
 
+import java.awt.Color;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -25,8 +27,9 @@ public class BlacklistIdCommand implements BotCommand {
 
     @Override
     public SlashCommandData getCommandData() {
-        return Commands.slash("blacklist_id", "Adds a user to the global Blacklist via Roblox ID.")
+        return Commands.slash("blacklist_id", "Adds a user to the global Blacklist via IDs.")
                 .addOption(OptionType.STRING, "roblox_id", "Roblox User ID", true)
+                .addOption(OptionType.STRING, "discord_id", "Discord User ID", false)
                 .addOption(OptionType.STRING, "reason", "Reason for blacklisting", false);
     }
 
@@ -41,6 +44,7 @@ public class BlacklistIdCommand implements BotCommand {
         }
 
         String robloxId = event.getOption("roblox_id").getAsString();
+        String providedDiscordId = event.getOption("discord_id") != null ? event.getOption("discord_id").getAsString() : null;
         String reason = event.getOption("reason") != null ? event.getOption("reason").getAsString() : "No reason provided";
 
         if (blacklistEntryRepository.existsByRobloxIdAndIsActiveTrue(robloxId)) {
@@ -49,7 +53,8 @@ public class BlacklistIdCommand implements BotCommand {
         }
 
         Optional<pl.cramber.assetstore.entity.User> dbUserOpt = userRepository.findByRobloxId(robloxId);
-        String discordId = dbUserOpt.map(pl.cramber.assetstore.entity.User::getDiscordId).orElse(null);
+
+        String discordId = providedDiscordId != null ? providedDiscordId : dbUserOpt.map(pl.cramber.assetstore.entity.User::getDiscordId).orElse(null);
         String robloxUsername = dbUserOpt.map(pl.cramber.assetstore.entity.User::getRobloxUsername).orElse(null);
 
         BlacklistEntry entry = BlacklistEntry.builder()
@@ -68,13 +73,22 @@ public class BlacklistIdCommand implements BotCommand {
             userRepository.save(dbUser);
         }
 
+        EmbedBuilder embed = new EmbedBuilder().setColor(Color.RED);
+
         if (discordId != null && !discordId.startsWith("DUMMY_")) {
             event.getGuild().ban(UserSnowflake.fromId(discordId), 0, TimeUnit.DAYS).reason(reason).queue(
-                    success -> event.reply("Successfully blacklisted Roblox ID `" + robloxId + "` and banned the linked Discord account.").setEphemeral(true).queue(),
-                    error -> event.reply("Successfully blacklisted Roblox ID `" + robloxId + "`, but failed to ban the linked Discord account.").setEphemeral(true).queue()
+                    success -> {
+                        embed.setDescription("Successfully blacklisted Roblox ID `" + robloxId + "` and banned Discord ID `<@" + discordId + ">`.");
+                        event.replyEmbeds(embed.build()).queue();
+                    },
+                    error -> {
+                        embed.setDescription("Successfully blacklisted Roblox ID `" + robloxId + "`, but failed to ban Discord ID `<@" + discordId + ">`.");
+                        event.replyEmbeds(embed.build()).queue();
+                    }
             );
         } else {
-            event.reply("Successfully blacklisted Roblox ID `" + robloxId + "`. No linked Discord account found.").setEphemeral(true).queue();
+            embed.setDescription("Successfully blacklisted Roblox ID `" + robloxId + "`. No linked Discord account found.");
+            event.replyEmbeds(embed.build()).queue();
         }
     }
 }

@@ -1,6 +1,7 @@
 package pl.cramber.assetstore.bot.commands;
 
 import lombok.RequiredArgsConstructor;
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Component;
 import pl.cramber.assetstore.repository.UserRepository;
 import pl.cramber.assetstore.service.ModerationService;
 
+import java.awt.Color;
 import java.time.Duration;
 import java.util.Optional;
 
@@ -69,7 +71,11 @@ public class MuteCommand implements BotCommand {
         event.getGuild().timeoutFor(targetMember, duration).reason(reason).queue(
                 success -> {
                     moderationService.logAndNotify(targetMember.getUser(), event.getUser(), "MUTE", reason, timeStr);
-                    event.reply("Successfully muted " + targetMember.getAsMention() + " for " + timeStr + ".").setEphemeral(true).queue();
+
+                    EmbedBuilder embed = new EmbedBuilder()
+                            .setColor(Color.RED)
+                            .setDescription("Successfully muted " + targetMember.getAsMention() + " for " + timeStr + ".");
+                    event.replyEmbeds(embed.build()).queue();
                 },
                 error -> event.reply("Failed to mute user. Check my role hierarchy and permissions.").setEphemeral(true).queue()
         );

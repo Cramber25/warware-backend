@@ -1,6 +1,7 @@
 package pl.cramber.assetstore.bot.commands;
 
 import lombok.RequiredArgsConstructor;
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -14,6 +15,7 @@ import pl.cramber.assetstore.repository.BlacklistEntryRepository;
 import pl.cramber.assetstore.repository.UserRepository;
 import pl.cramber.assetstore.service.ModerationService;
 
+import java.awt.Color;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -89,7 +91,11 @@ public class BlacklistCommand implements BotCommand {
                     blacklistEntryRepository.save(entry);
 
                     moderationService.logAndNotify(targetUser, event.getUser(), "BLACKLIST (BAN)", reason, "PERMANENT");
-                    event.reply("Successfully blacklisted and banned " + targetUser.getAsMention() + ".").setEphemeral(true).queue();
+
+                    EmbedBuilder embed = new EmbedBuilder()
+                            .setColor(Color.RED)
+                            .setDescription("Successfully blacklisted and banned " + targetUser.getAsMention() + ".");
+                    event.replyEmbeds(embed.build()).queue();
                 },
                 error -> event.reply("Failed to ban user. Check my role hierarchy.").setEphemeral(true).queue()
         );
