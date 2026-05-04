@@ -64,6 +64,15 @@ public class AdminAssetController {
                 ? assetRepository.searchAllAdmin(safeSearch, pageable)
                 : assetRepository.searchByCreatorIdAdmin(admin.getId(), safeSearch, pageable);
 
+        assets.forEach(asset -> {
+            if (asset.getTags() != null) {
+                asset.getTags().size();
+            }
+            if (asset.getCollections() != null) {
+                asset.getCollections().size();
+            }
+        });
+
         return ResponseEntity.ok(assets);
     }
 
