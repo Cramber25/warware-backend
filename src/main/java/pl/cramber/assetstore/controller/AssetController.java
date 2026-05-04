@@ -63,8 +63,15 @@ public class AssetController {
                 .map(asset -> {
                     assetRepository.incrementViewCount(id);
                     asset.setViewCount(asset.getViewCount() + 1);
-
                     asset.setAverageRating(Math.round(asset.getAverageRating() * 10.0) / 10.0);
+
+                    if (asset.getTags() != null) {
+                        asset.getTags().size();
+                    }
+                    if (asset.getCollections() != null) {
+                        asset.getCollections().size();
+                    }
+
                     return ResponseEntity.ok(asset);
                 })
                 .orElse(ResponseEntity.notFound().build());
