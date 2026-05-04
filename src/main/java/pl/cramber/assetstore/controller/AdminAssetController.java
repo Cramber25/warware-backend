@@ -79,7 +79,17 @@ public class AdminAssetController {
     @GetMapping("/{id}")
     @Transactional(readOnly = true)
     public ResponseEntity<Asset> getAssetById(@PathVariable UUID id) {
-        return assetRepository.findById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+        return assetRepository.findById(id)
+                .map(asset -> {
+                    if (asset.getTags() != null) {
+                        asset.getTags().size();
+                    }
+                    if (asset.getCollections() != null) {
+                        asset.getCollections().size();
+                    }
+                    return ResponseEntity.ok(asset);
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
