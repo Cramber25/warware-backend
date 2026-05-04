@@ -56,6 +56,7 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.GET, "/api/assets/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/collections/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/tags/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/settings/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/blacklists/**").permitAll()
