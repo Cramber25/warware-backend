@@ -32,6 +32,7 @@ public class AdminAssetController {
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
     private final TagRepository tagRepository;
+    private final CollectionRepository collectionRepository;
     private final AuditLogRepository auditLogRepository;
     private final R2Service r2Service;
 
@@ -151,10 +152,17 @@ public class AdminAssetController {
         } else {
             asset.setCategory(null);
         }
+
         if (request.getTagIds() != null) {
             asset.setTags(new HashSet<>(tagRepository.findAllById(request.getTagIds())));
         } else {
             asset.setTags(new HashSet<>());
+        }
+
+        if (request.getCollectionIds() != null) {
+            asset.setCollections(new HashSet<>(collectionRepository.findAllById(request.getCollectionIds())));
+        } else {
+            asset.setCollections(new HashSet<>());
         }
     }
 

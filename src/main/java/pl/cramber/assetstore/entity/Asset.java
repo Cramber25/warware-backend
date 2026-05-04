@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.ZonedDateTime;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
@@ -81,4 +82,12 @@ public class Asset {
     @Column(name = "rating_count", nullable = false)
     @Builder.Default
     private Integer ratingCount = 0;
+
+    @ManyToMany
+    @JoinTable(
+            name = "asset_collections",
+            joinColumns = @JoinColumn(name = "asset_id"),
+            inverseJoinColumns = @JoinColumn(name = "collection_id")
+    )
+    private Set<Collection> collections = new HashSet<>();
 }

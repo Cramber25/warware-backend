@@ -29,6 +29,7 @@ public class AssetController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) UUID categoryId,
             @RequestParam(required = false) List<UUID> tagIds,
+            @RequestParam(required = false) List<UUID> collectionIds,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDirection,
             @RequestParam(defaultValue = "0") int page,
@@ -36,6 +37,7 @@ public class AssetController {
 
         String validSearch = (search != null) ? search : "";
         List<UUID> validTagIds = (tagIds != null && !tagIds.isEmpty()) ? tagIds : null;
+        List<UUID> validCollectionIds = (collectionIds != null && !collectionIds.isEmpty()) ? collectionIds : null;
 
         Sort.Direction direction = sortDirection.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
 
@@ -49,7 +51,7 @@ public class AssetController {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, validSortBy));
 
-        return assetRepository.findPublicAssetsWithFilters(validSearch, categoryId, validTagIds, pageable)
+        return assetRepository.findPublicAssetsWithFilters(validSearch, categoryId, validTagIds, validCollectionIds, pageable)
                 .map(AssetSummaryDto::new);
     }
 

@@ -21,14 +21,17 @@ public interface AssetRepository extends JpaRepository<Asset, UUID> {
 
     @Query("SELECT DISTINCT a FROM Asset a " +
             "LEFT JOIN a.tags t " +
+            "LEFT JOIN a.collections c " +
             "WHERE a.visibility = 'PUBLIC' " +
             "AND LOWER(a.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "AND (:categoryId IS NULL OR a.category.id = :categoryId) " +
-            "AND (:tagIds IS NULL OR t.id IN :tagIds)")
+            "AND (:tagIds IS NULL OR t.id IN :tagIds) " +
+            "AND (:collectionIds IS NULL OR c.id IN :collectionIds)")
     Page<Asset> findPublicAssetsWithFilters(
             @Param("search") String search,
             @Param("categoryId") UUID categoryId,
             @Param("tagIds") List<UUID> tagIds,
+            @Param("collectionIds") List<UUID> collectionIds,
             Pageable pageable);
 
     @Query("SELECT a FROM Asset a WHERE LOWER(a.title) LIKE LOWER(CONCAT('%', :search, '%'))")

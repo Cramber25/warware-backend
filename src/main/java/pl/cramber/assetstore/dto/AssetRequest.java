@@ -18,4 +18,5 @@ public class AssetRequest {
     private UUID categoryId;
     private List<UUID> tagIds;
     private ZonedDateTime createdAt;
+    private List<UUID> collectionIds;
 }

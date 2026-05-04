@@ -6,9 +6,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import pl.cramber.assetstore.entity.Asset;
 import pl.cramber.assetstore.entity.Category;
+import pl.cramber.assetstore.entity.Collection;
 import pl.cramber.assetstore.entity.Tag;
 import pl.cramber.assetstore.repository.AssetRepository;
 import pl.cramber.assetstore.repository.CategoryRepository;
+import pl.cramber.assetstore.repository.CollectionRepository;
 import pl.cramber.assetstore.repository.TagRepository;
 
 import java.util.List;
@@ -22,6 +24,7 @@ public class AdminMetadataController {
 
     private final CategoryRepository categoryRepository;
     private final TagRepository tagRepository;
+    private final CollectionRepository collectionRepository;
     private final AssetRepository assetRepository;
 
     @PostMapping("/categories")
@@ -67,5 +70,29 @@ public class AdminMetadataController {
         assets.forEach(a -> a.getTags().remove(tag));
         assetRepository.saveAll(assets);
         tagRepository.delete(tag);
+    }
+
+    @PostMapping("/collections")
+    public Collection addCollection(@RequestBody Collection collection) {
+        return collectionRepository.save(collection);
+    }
+
+    @PutMapping("/collections/{id}")
+    public Collection updateCollection(@PathVariable UUID id, @RequestBody Collection data) {
+        Collection collection = collectionRepository.findById(id).orElseThrow();
+        collection.setName(data.getName());
+        collection.setDescription(data.getDescription());
+        collection.setThumbnailUrl(data.getThumbnailUrl());
+        return collectionRepository.save(collection);
+    }
+
+    @DeleteMapping("/collections/{id}")
+    @Transactional
+    public void deleteCollection(@PathVariable UUID id) {
+        Collection collection = collectionRepository.findById(id).orElseThrow();
+        List<Asset> assets = assetRepository.findAll();
+        assets.forEach(a -> a.getCollections().remove(collection));
+        assetRepository.saveAll(assets);
+        collectionRepository.delete(collection);
     }
 }
