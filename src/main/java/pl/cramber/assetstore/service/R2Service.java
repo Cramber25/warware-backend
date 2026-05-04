@@ -56,7 +56,8 @@ public class R2Service {
     }
 
     public void deleteFile(String fileKey) {
-        String targetBucket = fileKey.startsWith("images/") ? publicBucketName : privateBucketName;
+        String targetBucket = fileKey.startsWith("images/") || fileKey.startsWith("assets/") || fileKey.startsWith("avatars/")
+                ? publicBucketName : privateBucketName;
 
         DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
                 .bucket(targetBucket)
@@ -66,13 +67,25 @@ public class R2Service {
         s3Client.deleteObject(deleteObjectRequest);
     }
 
-    public ImageUploadTicket generateImageUploadUrl(UUID userId, String originalFilename) {
-        String objectKey = "images/" + userId + "/" + UUID.randomUUID() + "-" + originalFilename;
+    public ImageUploadTicket generateImageUploadUrl(String originalFilename, String type, UUID assetId, String folder) {
+        String objectKey;
+        String extension = getFileExtension(originalFilename);
+
+        if ("thumbnail".equalsIgnoreCase(type)) {
+            if (assetId == null) throw new IllegalArgumentException("ASSET_ID_REQUIRED");
+            objectKey = "assets/" + assetId + "/thumbnail." + extension;
+        } else if ("gallery".equalsIgnoreCase(type)) {
+            if (assetId == null) throw new IllegalArgumentException("ASSET_ID_REQUIRED");
+            objectKey = "assets/" + assetId + "/gallery/" + originalFilename;
+        } else {
+            String targetFolder = (folder != null && !folder.trim().isEmpty()) ? folder : "images";
+            objectKey = targetFolder + "/" + originalFilename;
+        }
 
         PutObjectRequest objectRequest = PutObjectRequest.builder()
                 .bucket(publicBucketName)
                 .key(objectKey)
-                .contentType("image/" + getFileExtension(originalFilename))
+                .contentType("image/" + extension)
                 .build();
 
         PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
@@ -86,9 +99,9 @@ public class R2Service {
         return new ImageUploadTicket(presignedUploadUrl, finalPublicUrl);
     }
 
-    public List<ImageUploadTicket> generateImageUploadUrls(UUID userId, List<String> originalFilenames) {
+    public List<ImageUploadTicket> generateImageUploadUrls(List<String> originalFilenames, String type, UUID assetId, String folder) {
         return originalFilenames.stream()
-                .map(filename -> generateImageUploadUrl(userId, filename))
+                .map(filename -> generateImageUploadUrl(filename, type, assetId, folder))
                 .toList();
     }
 
