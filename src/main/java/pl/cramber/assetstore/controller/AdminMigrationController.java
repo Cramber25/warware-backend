@@ -125,10 +125,12 @@ public class AdminMigrationController {
     }
 
     private void moveObjectInR2(String oldKey, String newKey) {
-        String source = URLEncoder.encode(publicBucketName + "/" + oldKey, StandardCharsets.UTF_8);
+        String encodedSourceKey = URLEncoder.encode(publicBucketName + "/" + oldKey, StandardCharsets.UTF_8)
+                .replace("+", "%20")
+                .replace("%2F", "/");
 
         CopyObjectRequest copyReq = CopyObjectRequest.builder()
-                .copySource(source)
+                .copySource(encodedSourceKey)
                 .destinationBucket(publicBucketName)
                 .destinationKey(newKey)
                 .build();
