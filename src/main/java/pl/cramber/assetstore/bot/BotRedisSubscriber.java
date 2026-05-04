@@ -2,14 +2,18 @@ package pl.cramber.assetstore.bot;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Role;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.stereotype.Component;
+import pl.cramber.assetstore.repository.UserRepository;
 import pl.cramber.assetstore.service.StoreSettingService;
 
+import java.awt.Color;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
@@ -21,6 +25,7 @@ public class BotRedisSubscriber implements MessageListener {
 
     private final BotManager botManager;
     private final StoreSettingService storeSettingService;
+    private final UserRepository userRepository;
 
     @Override
     public void onMessage(Message message, byte[] pattern) {
@@ -44,6 +49,7 @@ public class BotRedisSubscriber implements MessageListener {
 
             String verifiedRoleId = settings.get("DISCORD_VERIFIED_ROLE_ID");
             String unverifiedRoleId = settings.get("DISCORD_UNVERIFIED_ROLE_ID");
+            String verifyChannelId = settings.get("DISCORD_VERIFY_CHANNEL_ID");
 
             guild.retrieveMemberById(discordId).queue(member -> {
                 if (verifiedRoleId != null && !verifiedRoleId.isEmpty()) {
@@ -62,6 +68,25 @@ public class BotRedisSubscriber implements MessageListener {
 
                 String newNick = robloxUsername.length() > 32 ? robloxUsername.substring(0, 32) : robloxUsername;
                 member.modifyNickname(newNick).queue(null, e -> log.warn("Nickname change failed"));
+
+                if (verifyChannelId != null && !verifyChannelId.isEmpty()) {
+                    TextChannel channel = guild.getTextChannelById(verifyChannelId);
+                    if (channel != null) {
+                        userRepository.findByDiscordId(discordId).ifPresent(user -> {
+                            EmbedBuilder embed = new EmbedBuilder()
+                                    .setTitle("Verification Successful")
+                                    .setColor(Color.GREEN)
+                                    .setDescription(member.getAsMention() + " has successfully verified their account as **" + robloxUsername + "**.");
+
+                            if (user.getRobloxAvatarUrl() != null) {
+                                embed.setThumbnail(user.getRobloxAvatarUrl());
+                            }
+
+                            channel.sendMessageEmbeds(embed.build()).queue();
+                        });
+                    }
+                }
+
             }, failure -> log.error("Member not found for live verification"));
 
         } catch (Exception e) {

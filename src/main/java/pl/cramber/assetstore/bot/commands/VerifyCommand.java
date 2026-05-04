@@ -7,6 +7,7 @@ import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
@@ -43,13 +44,14 @@ public class VerifyCommand implements BotCommand {
         Member member = event.getMember();
 
         if (guild == null || member == null) {
-            event.reply("This command can only be used within a server.").setEphemeral(false).queue();
+            event.reply("This command can only be used within a server.").setEphemeral(true).queue();
             return;
         }
 
         Map<String, String> settings = storeSettingService.getAllSettings();
         String verifiedRoleId = settings.get("DISCORD_VERIFIED_ROLE_ID");
         String unverifiedRoleId = settings.get("DISCORD_UNVERIFIED_ROLE_ID");
+        String verifyChannelId = settings.get("DISCORD_VERIFY_CHANNEL_ID");
 
         boolean isVerified = false;
         boolean hasUnverifiedRole = false;
@@ -69,7 +71,7 @@ public class VerifyCommand implements BotCommand {
         if (dbUserOpt.isEmpty()) {
             event.reply("You are not registered in our database. Please log in on our website first to link your account.")
                     .setComponents(ActionRow.of(Button.link(frontendUrl, "Log In")))
-                    .setEphemeral(false)
+                    .setEphemeral(true)
                     .queue();
             return;
         }
@@ -79,23 +81,17 @@ public class VerifyCommand implements BotCommand {
         if (dbUser.getRobloxId() == null) {
             event.reply("You haven't linked your Roblox account yet. Please visit your dashboard to connect it.")
                     .setComponents(ActionRow.of(Button.link(frontendUrl + "/dashboard", "Link Roblox")))
-                    .setEphemeral(false)
+                    .setEphemeral(true)
                     .queue();
             return;
         }
 
         if (isVerified && !hasUnverifiedRole) {
             event.reply("You are already fully verified and your roles are up to date!")
-                    .setEphemeral(false)
+                    .setEphemeral(true)
                     .queue();
             return;
         }
-
-        EmbedBuilder embed = new EmbedBuilder()
-                .setTitle("Verification Sync")
-                .setColor(Color.GREEN)
-                .setThumbnail(dbUser.getRobloxAvatarUrl())
-                .setDescription("Successfully synced your account with **" + dbUser.getRobloxUsername() + "**.");
 
         if (verifiedRoleId != null && !verifiedRoleId.isEmpty()) {
             Role verifiedRole = guild.getRoleById(verifiedRoleId);
@@ -114,12 +110,25 @@ public class VerifyCommand implements BotCommand {
         String robloxUsername = dbUser.getRobloxUsername();
         String newNick = robloxUsername.length() > 32 ? robloxUsername.substring(0, 32) : robloxUsername;
         try {
-            member.modifyNickname(newNick).queue(
-                    null,
-                    error -> embed.appendDescription("\n\n*Note: Could not change your nickname due to hierarchy or missing permissions.*")
-            );
+            member.modifyNickname(newNick).queue();
         } catch (Exception ignored) {}
 
-        event.replyEmbeds(embed.build()).setEphemeral(false).queue();
+        if (verifyChannelId != null && !verifyChannelId.isEmpty()) {
+            TextChannel channel = guild.getTextChannelById(verifyChannelId);
+            if (channel != null) {
+                EmbedBuilder publicEmbed = new EmbedBuilder()
+                        .setTitle("Verification Successful")
+                        .setColor(Color.GREEN)
+                        .setDescription(member.getAsMention() + " has successfully verified their account as **" + robloxUsername + "**.");
+
+                if (dbUser.getRobloxAvatarUrl() != null) {
+                    publicEmbed.setThumbnail(dbUser.getRobloxAvatarUrl());
+                }
+
+                channel.sendMessageEmbeds(publicEmbed.build()).queue();
+            }
+        }
+
+        event.reply("You have been successfully verified!").setEphemeral(true).queue();
     }
 }
