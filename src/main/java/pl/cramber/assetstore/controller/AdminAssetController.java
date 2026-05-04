@@ -68,11 +68,13 @@ public class AdminAssetController {
     }
 
     @GetMapping("/{id}")
+    @Transactional(readOnly = true)
     public ResponseEntity<Asset> getAssetById(@PathVariable UUID id) {
         return assetRepository.findById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
+    @Transactional
     public ResponseEntity<Asset> createAsset(
             @RequestBody AssetRequest request,
             @AuthenticationPrincipal OAuth2User principal) {
@@ -105,6 +107,7 @@ public class AdminAssetController {
     }
 
     @PutMapping("/{id}")
+    @Transactional
     public ResponseEntity<Asset> updateAsset(
             @PathVariable UUID id,
             @RequestBody AssetRequest request,
