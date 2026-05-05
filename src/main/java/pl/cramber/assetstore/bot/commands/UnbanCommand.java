@@ -36,17 +36,21 @@ public class UnbanCommand implements BotCommand {
     @Override
     @Transactional
     public void execute(SlashCommandInteractionEvent event) {
+        event.deferReply().queue();
+
         String executorId = event.getUser().getId();
         Optional<pl.cramber.assetstore.entity.User> executorOpt = userRepository.findByDiscordId(executorId);
 
         if (executorOpt.isEmpty()) {
-            event.reply("You do not have permission to use this command.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("You do not have permission to use this command.").setEphemeral(true).queue();
             return;
         }
 
         String executorRole = executorOpt.get().getRole();
         if (!"SUPERADMIN".equals(executorRole) && !"ADMIN".equals(executorRole) && !"MODERATOR".equals(executorRole)) {
-            event.reply("You do not have permission to use this command.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("You do not have permission to use this command.").setEphemeral(true).queue();
             return;
         }
 
@@ -56,15 +60,17 @@ public class UnbanCommand implements BotCommand {
         event.getGuild().unban(UserSnowflake.fromId(targetId)).reason(reason).queue(
                 success -> {
                     tempBanRepository.deleteByDiscordIdAndGuildId(targetId, event.getGuild().getId());
-
                     moderationService.logWithoutDM(targetId, "Unknown", "<@" + targetId + ">", event.getUser(), "UNBAN", reason, null);
 
                     EmbedBuilder embed = new EmbedBuilder()
                             .setColor(Color.GREEN)
                             .setDescription("Successfully unbanned <@" + targetId + ">.");
-                    event.replyEmbeds(embed.build()).queue();
+                    event.getHook().editOriginalEmbeds(embed.build()).queue();
                 },
-                error -> event.reply("Failed to unban user. Are you sure they are banned and the ID is correct?").setEphemeral(true).queue()
+                error -> {
+                    event.getHook().deleteOriginal().queue();
+                    event.getHook().sendMessage("Failed to unban user. Are you sure they are banned and the ID is correct?").setEphemeral(true).queue();
+                }
         );
     }
 }

@@ -35,11 +35,14 @@ public class RemoveBlacklistCommand implements BotCommand {
 
     @Override
     public void execute(SlashCommandInteractionEvent event) {
+        event.deferReply().queue();
+
         String executorId = event.getUser().getId();
         Optional<pl.cramber.assetstore.entity.User> executorOpt = userRepository.findByDiscordId(executorId);
 
         if (executorOpt.isEmpty() || !"SUPERADMIN".equals(executorOpt.get().getRole())) {
-            event.reply("You do not have permission to use this command. Superadmin only.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("You do not have permission to use this command. Superadmin only.").setEphemeral(true).queue();
             return;
         }
 
@@ -47,7 +50,8 @@ public class RemoveBlacklistCommand implements BotCommand {
         String robloxId = event.getOption("roblox_id") != null ? event.getOption("roblox_id").getAsString() : null;
 
         if (discordId == null && robloxId == null) {
-            event.reply("You must provide either a Discord ID or a Roblox ID.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("You must provide either a Discord ID or a Roblox ID.").setEphemeral(true).queue();
             return;
         }
 
@@ -60,7 +64,8 @@ public class RemoveBlacklistCommand implements BotCommand {
         }
 
         if (entryOpt.isEmpty()) {
-            event.reply("No active blacklist entry found for the provided details.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("No active blacklist entry found for the provided details.").setEphemeral(true).queue();
             return;
         }
 
@@ -92,6 +97,6 @@ public class RemoveBlacklistCommand implements BotCommand {
         EmbedBuilder embed = new EmbedBuilder()
                 .setColor(Color.GREEN)
                 .setDescription("Successfully removed the active blacklist. The entry has been archived for history.");
-        event.replyEmbeds(embed.build()).queue();
+        event.getHook().editOriginalEmbeds(embed.build()).queue();
     }
 }

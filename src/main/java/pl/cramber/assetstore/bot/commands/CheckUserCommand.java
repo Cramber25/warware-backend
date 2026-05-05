@@ -40,11 +40,13 @@ public class CheckUserCommand implements BotCommand {
 
     @Override
     public void execute(SlashCommandInteractionEvent event) {
+        event.deferReply().setEphemeral(true).queue();
+
         String executorDiscordId = event.getUser().getId();
         Optional<pl.cramber.assetstore.entity.User> executorOpt = userRepository.findByDiscordId(executorDiscordId);
 
         if (executorOpt.isEmpty() || !"SUPERADMIN".equals(executorOpt.get().getRole())) {
-            event.reply("You do not have permission to use this command.").setEphemeral(true).queue();
+            event.getHook().sendMessage("You do not have permission to use this command.").queue();
             return;
         }
 
@@ -60,13 +62,15 @@ public class CheckUserCommand implements BotCommand {
         String requiredAdminId = parts[1];
         String targetUserId = parts[2];
         String targetUserName = parts[3];
-        int page = Integer.parseInt(parts[4]);
 
         if (!event.getUser().getId().equals(requiredAdminId)) {
             event.reply("You cannot interact with this menu.").setEphemeral(true).queue();
             return;
         }
 
+        event.deferEdit().queue();
+
+        int page = Integer.parseInt(parts[4]);
         handlePage(requiredAdminId, targetUserId, targetUserName, page, event);
     }
 
@@ -135,24 +139,24 @@ public class CheckUserCommand implements BotCommand {
 
     private void sendError(Object eventContext, String message) {
         if (eventContext instanceof SlashCommandInteractionEvent slashEvent) {
-            slashEvent.reply(message).setEphemeral(true).queue();
+            slashEvent.getHook().sendMessage(message).queue();
         } else if (eventContext instanceof ButtonInteractionEvent btnEvent) {
-            btnEvent.reply(message).setEphemeral(true).queue();
+            btnEvent.getHook().sendMessage(message).setEphemeral(true).queue();
         }
     }
 
     private void sendEmbed(Object eventContext, EmbedBuilder embed, List<Button> buttons) {
         if (eventContext instanceof SlashCommandInteractionEvent slashEvent) {
             if (buttons == null || buttons.isEmpty()) {
-                slashEvent.replyEmbeds(embed.build()).setEphemeral(false).queue();
+                slashEvent.getHook().sendMessageEmbeds(embed.build()).queue();
             } else {
-                slashEvent.replyEmbeds(embed.build()).setComponents(ActionRow.of(buttons)).setEphemeral(false).queue();
+                slashEvent.getHook().sendMessageEmbeds(embed.build()).setComponents(ActionRow.of(buttons)).queue();
             }
         } else if (eventContext instanceof ButtonInteractionEvent btnEvent) {
             if (buttons == null || buttons.isEmpty()) {
-                btnEvent.editMessageEmbeds(embed.build()).setComponents().queue();
+                btnEvent.getHook().editOriginalEmbeds(embed.build()).setComponents().queue();
             } else {
-                btnEvent.editMessageEmbeds(embed.build()).setComponents(ActionRow.of(buttons)).queue();
+                btnEvent.getHook().editOriginalEmbeds(embed.build()).setComponents(ActionRow.of(buttons)).queue();
             }
         }
     }

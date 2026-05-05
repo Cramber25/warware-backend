@@ -37,6 +37,7 @@ public class MyPurchasesCommand implements BotCommand {
 
     @Override
     public void execute(SlashCommandInteractionEvent event) {
+        event.deferReply().setEphemeral(true).queue();
         handlePage(event.getUser().getId(), 0, event);
     }
 
@@ -50,6 +51,8 @@ public class MyPurchasesCommand implements BotCommand {
             event.reply("You cannot interact with this menu.").setEphemeral(true).queue();
             return;
         }
+
+        event.deferEdit().queue();
 
         int page = Integer.parseInt(parts[2]);
         handlePage(targetUserId, page, event);
@@ -108,24 +111,24 @@ public class MyPurchasesCommand implements BotCommand {
 
     private void sendError(Object eventContext, String message) {
         if (eventContext instanceof SlashCommandInteractionEvent slashEvent) {
-            slashEvent.reply(message).setEphemeral(true).queue();
+            slashEvent.getHook().sendMessage(message).queue();
         } else if (eventContext instanceof ButtonInteractionEvent btnEvent) {
-            btnEvent.reply(message).setEphemeral(true).queue();
+            btnEvent.getHook().sendMessage(message).setEphemeral(true).queue();
         }
     }
 
     private void sendEmbed(Object eventContext, EmbedBuilder embed, List<Button> buttons) {
         if (eventContext instanceof SlashCommandInteractionEvent slashEvent) {
             if (buttons == null || buttons.isEmpty()) {
-                slashEvent.replyEmbeds(embed.build()).setEphemeral(false).queue();
+                slashEvent.getHook().sendMessageEmbeds(embed.build()).queue();
             } else {
-                slashEvent.replyEmbeds(embed.build()).setComponents(ActionRow.of(buttons)).setEphemeral(false).queue();
+                slashEvent.getHook().sendMessageEmbeds(embed.build()).setComponents(ActionRow.of(buttons)).queue();
             }
         } else if (eventContext instanceof ButtonInteractionEvent btnEvent) {
             if (buttons == null || buttons.isEmpty()) {
-                btnEvent.editMessageEmbeds(embed.build()).setComponents().queue();
+                btnEvent.getHook().editOriginalEmbeds(embed.build()).setComponents().queue();
             } else {
-                btnEvent.editMessageEmbeds(embed.build()).setComponents(ActionRow.of(buttons)).queue();
+                btnEvent.getHook().editOriginalEmbeds(embed.build()).setComponents(ActionRow.of(buttons)).queue();
             }
         }
     }

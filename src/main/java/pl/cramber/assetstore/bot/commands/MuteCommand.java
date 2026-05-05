@@ -34,28 +34,34 @@ public class MuteCommand implements BotCommand {
 
     @Override
     public void execute(SlashCommandInteractionEvent event) {
+        event.deferReply().queue();
+
         String executorId = event.getUser().getId();
         Optional<pl.cramber.assetstore.entity.User> executorOpt = userRepository.findByDiscordId(executorId);
 
         if (executorOpt.isEmpty()) {
-            event.reply("You do not have permission to use this command.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("You do not have permission to use this command.").setEphemeral(true).queue();
             return;
         }
 
         String executorRole = executorOpt.get().getRole();
         if (!"SUPERADMIN".equals(executorRole) && !"ADMIN".equals(executorRole) && !"MODERATOR".equals(executorRole)) {
-            event.reply("You do not have permission to use this command.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("You do not have permission to use this command.").setEphemeral(true).queue();
             return;
         }
 
         Member targetMember = event.getOption("user").getAsMember();
         if (targetMember == null) {
-            event.reply("User is not in the server.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("User is not in the server.").setEphemeral(true).queue();
             return;
         }
 
         if (!event.getMember().canInteract(targetMember)) {
-            event.reply("You cannot moderate this user due to Discord role hierarchy.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("You cannot moderate this user due to Discord role hierarchy.").setEphemeral(true).queue();
             return;
         }
 
@@ -64,7 +70,8 @@ public class MuteCommand implements BotCommand {
 
         Duration duration = parseDuration(timeStr);
         if (duration == null) {
-            event.reply("Invalid time format. Please use formats like `10m`, `1h`, `1d`.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("Invalid time format. Please use formats like `10m`, `1h`, `1d`.").setEphemeral(true).queue();
             return;
         }
 
@@ -75,9 +82,12 @@ public class MuteCommand implements BotCommand {
                     EmbedBuilder embed = new EmbedBuilder()
                             .setColor(Color.RED)
                             .setDescription("Successfully muted " + targetMember.getAsMention() + " for " + timeStr + ".");
-                    event.replyEmbeds(embed.build()).queue();
+                    event.getHook().editOriginalEmbeds(embed.build()).queue();
                 },
-                error -> event.reply("Failed to mute user. Check my role hierarchy and permissions.").setEphemeral(true).queue()
+                error -> {
+                    event.getHook().deleteOriginal().queue();
+                    event.getHook().sendMessage("Failed to mute user. Check my role hierarchy and permissions.").setEphemeral(true).queue();
+                }
         );
     }
 

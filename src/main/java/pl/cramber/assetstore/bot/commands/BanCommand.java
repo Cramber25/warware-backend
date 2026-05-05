@@ -40,17 +40,21 @@ public class BanCommand implements BotCommand {
 
     @Override
     public void execute(SlashCommandInteractionEvent event) {
+        event.deferReply().queue();
+
         String executorId = event.getUser().getId();
         Optional<pl.cramber.assetstore.entity.User> executorOpt = userRepository.findByDiscordId(executorId);
 
         if (executorOpt.isEmpty()) {
-            event.reply("You do not have permission to use this command.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("You do not have permission to use this command.").setEphemeral(true).queue();
             return;
         }
 
         String executorRole = executorOpt.get().getRole();
         if (!"SUPERADMIN".equals(executorRole) && !"ADMIN".equals(executorRole) && !"MODERATOR".equals(executorRole)) {
-            event.reply("You do not have permission to use this command.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("You do not have permission to use this command.").setEphemeral(true).queue();
             return;
         }
 
@@ -58,7 +62,8 @@ public class BanCommand implements BotCommand {
         Member targetMember = event.getOption("user").getAsMember();
 
         if (targetMember != null && !event.getMember().canInteract(targetMember)) {
-            event.reply("You cannot moderate this user due to Discord role hierarchy.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("You cannot moderate this user due to Discord role hierarchy.").setEphemeral(true).queue();
             return;
         }
 
@@ -67,7 +72,8 @@ public class BanCommand implements BotCommand {
                 .orElse("USER");
 
         if (!moderationService.canModerate(executorRole, targetRole)) {
-            event.reply("You cannot moderate this user due to database role hierarchy.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("You cannot moderate this user due to database role hierarchy.").setEphemeral(true).queue();
             return;
         }
 
@@ -76,7 +82,8 @@ public class BanCommand implements BotCommand {
 
         Duration duration = parseDuration(timeStr);
         if (timeStr != null && duration == null) {
-            event.reply("Invalid time format. Please use formats like `1h`, `1d`, `1w`.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("Invalid time format. Please use formats like `1h`, `1d`, `1w`.").setEphemeral(true).queue();
             return;
         }
 
@@ -106,9 +113,12 @@ public class BanCommand implements BotCommand {
                         EmbedBuilder embed = new EmbedBuilder()
                                 .setColor(Color.RED)
                                 .setDescription("Successfully banned " + targetUser.getAsMention() + " for " + durationDisplay + ".");
-                        event.replyEmbeds(embed.build()).queue();
+                        event.getHook().sendMessageEmbeds(embed.build()).queue();
                     },
-                    error -> event.reply("Failed to ban user. Check my role hierarchy.").setEphemeral(true).queue()
+                    error -> {
+                        event.getHook().deleteOriginal().queue();
+                        event.getHook().sendMessage("Failed to ban user. Check hierarchy or IDs.").setEphemeral(true).queue();
+                    }
             );
         };
 

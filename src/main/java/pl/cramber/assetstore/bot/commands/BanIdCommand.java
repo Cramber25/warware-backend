@@ -39,17 +39,21 @@ public class BanIdCommand implements BotCommand {
 
     @Override
     public void execute(SlashCommandInteractionEvent event) {
+        event.deferReply().queue();
+
         String executorId = event.getUser().getId();
         Optional<pl.cramber.assetstore.entity.User> executorOpt = userRepository.findByDiscordId(executorId);
 
         if (executorOpt.isEmpty()) {
-            event.reply("You do not have permission to use this command.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("You do not have permission to use this command.").setEphemeral(true).queue();
             return;
         }
 
         String executorRole = executorOpt.get().getRole();
         if (!"SUPERADMIN".equals(executorRole) && !"ADMIN".equals(executorRole) && !"MODERATOR".equals(executorRole)) {
-            event.reply("You do not have permission to use this command.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("You do not have permission to use this command.").setEphemeral(true).queue();
             return;
         }
 
@@ -59,7 +63,8 @@ public class BanIdCommand implements BotCommand {
 
         Duration duration = parseDuration(timeStr);
         if (timeStr != null && duration == null) {
-            event.reply("Invalid time format. Please use formats like `1h`, `1d`, `1w`.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("Invalid time format. Please use formats like `1h`, `1d`, `1w`.").setEphemeral(true).queue();
             return;
         }
 
@@ -82,9 +87,12 @@ public class BanIdCommand implements BotCommand {
                         EmbedBuilder embed = new EmbedBuilder()
                                 .setColor(Color.RED)
                                 .setDescription("Successfully banned <@" + targetId + "> for " + durationDisplay + ".");
-                        event.replyEmbeds(embed.build()).queue();
+                        event.getHook().editOriginalEmbeds(embed.build()).queue();
                     },
-                    error -> event.reply("Failed to ban user ID `" + targetId + "`. Check my role hierarchy or verify if the ID is valid.").setEphemeral(true).queue()
+                    error -> {
+                        event.getHook().deleteOriginal().queue();
+                        event.getHook().sendMessage("Failed to ban user ID `" + targetId + "`. Check my role hierarchy or verify if the ID is valid.").setEphemeral(true).queue();
+                    }
             );
         };
 

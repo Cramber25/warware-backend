@@ -37,11 +37,14 @@ public class BlacklistIdCommand implements BotCommand {
 
     @Override
     public void execute(SlashCommandInteractionEvent event) {
+        event.deferReply().queue();
+
         String executorId = event.getUser().getId();
         Optional<pl.cramber.assetstore.entity.User> executorOpt = userRepository.findByDiscordId(executorId);
 
         if (executorOpt.isEmpty() || !"SUPERADMIN".equals(executorOpt.get().getRole())) {
-            event.reply("You do not have permission to use this command. Superadmin only.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("You do not have permission to use this command. Superadmin only.").setEphemeral(true).queue();
             return;
         }
 
@@ -50,7 +53,8 @@ public class BlacklistIdCommand implements BotCommand {
         String reason = event.getOption("reason") != null ? event.getOption("reason").getAsString() : "No reason provided";
 
         if (blacklistEntryRepository.existsByRobloxIdAndIsActiveTrue(robloxId)) {
-            event.reply("This Roblox ID is already in the active blacklist database.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("This Roblox ID is already in the active blacklist database.").setEphemeral(true).queue();
             return;
         }
 
@@ -67,16 +71,22 @@ public class BlacklistIdCommand implements BotCommand {
         } else {
             replyEmbed.setDescription("Successfully blacklisted Roblox ID `" + robloxId + "`. No linked Discord account found.");
         }
-        event.replyEmbeds(replyEmbed.build()).queue();
 
         Runnable executeBanAndLog = () -> {
             if (finalDiscordId != null) {
                 event.getGuild().ban(UserSnowflake.fromId(finalDiscordId), 0, TimeUnit.DAYS).reason(reason).queue(
-                        success -> saveAndLog(event, finalDiscordId, robloxId, robloxUsername, executorId, reason, dbUserOpt),
-                        error -> saveAndLog(event, finalDiscordId, robloxId, robloxUsername, executorId, reason, dbUserOpt)
+                        success -> {
+                            saveAndLog(event, finalDiscordId, robloxId, robloxUsername, executorId, reason, dbUserOpt);
+                            event.getHook().editOriginalEmbeds(replyEmbed.build()).queue();
+                        },
+                        error -> {
+                            saveAndLog(event, finalDiscordId, robloxId, robloxUsername, executorId, reason, dbUserOpt);
+                            event.getHook().editOriginalEmbeds(replyEmbed.build()).queue();
+                        }
                 );
             } else {
                 saveAndLog(event, null, robloxId, robloxUsername, executorId, reason, dbUserOpt);
+                event.getHook().editOriginalEmbeds(replyEmbed.build()).queue();
             }
         };
 

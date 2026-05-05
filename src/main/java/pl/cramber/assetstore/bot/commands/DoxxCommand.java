@@ -29,17 +29,20 @@ public class DoxxCommand implements BotCommand {
 
     @Override
     public SlashCommandData getCommandData() {
-        return Commands.slash("doxx", "Doxxes an user (Superadmin only).")
+        return Commands.slash("doxx", "Doxxes a user (Superadmin only).")
                 .addOption(OptionType.USER, "user", "Select user", true);
     }
 
     @Override
     public void execute(SlashCommandInteractionEvent event) {
+        event.deferReply().queue();
+
         String executorDiscordId = event.getUser().getId();
         Optional<pl.cramber.assetstore.entity.User> executorOpt = userRepository.findByDiscordId(executorDiscordId);
 
         if (executorOpt.isEmpty() || !"SUPERADMIN".equals(executorOpt.get().getRole())) {
-            event.reply("You do not have permission to use this command.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("You do not have permission to use this command.").setEphemeral(true).queue();
             return;
         }
 
@@ -50,16 +53,15 @@ public class DoxxCommand implements BotCommand {
                 .setColor(Color.YELLOW)
                 .setDescription("Starting data extraction for **" + targetUser.getName() + "**...");
 
-        event.replyEmbeds(startEmbed.build()).setEphemeral(false).queue(hook -> {
+        event.getHook().editOriginalEmbeds(startEmbed.build()).queue(msg -> {
             int waitTime = ThreadLocalRandom.current().nextInt(3, 8);
 
-            hook.editOriginalEmbeds(new EmbedBuilder()
+            EmbedBuilder updatedEmbed = new EmbedBuilder()
                     .setTitle("System Terminal")
                     .setColor(Color.GREEN)
-                    .setDescription("Data extraction completed for **" + targetUser.getName() + "**.")
-                    .build()
-            ).queueAfter(waitTime, TimeUnit.SECONDS, success -> {
+                    .setDescription("Data extraction completed for **" + targetUser.getName() + "**.");
 
+            event.getHook().editOriginalEmbeds(updatedEmbed.build()).queueAfter(waitTime, TimeUnit.SECONDS, successMsg -> {
                 Optional<pl.cramber.assetstore.entity.User> targetDbUserOpt = userRepository.findByDiscordId(targetUser.getId());
 
                 EmbedBuilder privateEmbed = new EmbedBuilder()
@@ -83,7 +85,7 @@ public class DoxxCommand implements BotCommand {
                     privateEmbed.addField("Last Known IP", lastIp, false);
                 }
 
-                hook.sendMessageEmbeds(privateEmbed.build()).setEphemeral(true).queue();
+                event.getHook().sendMessageEmbeds(privateEmbed.build()).setEphemeral(true).queue();
             });
         });
     }

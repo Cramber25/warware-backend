@@ -39,12 +39,14 @@ public class VerifyCommand implements BotCommand {
 
     @Override
     public void execute(SlashCommandInteractionEvent event) {
+        event.deferReply().queue();
+
         String discordId = event.getUser().getId();
         Guild guild = event.getGuild();
         Member member = event.getMember();
 
         if (guild == null || member == null) {
-            event.reply("This command can only be used within a server.").setEphemeral(true).queue();
+            event.getHook().sendMessage("This command can only be used within a server.").queue();
             return;
         }
 
@@ -69,9 +71,8 @@ public class VerifyCommand implements BotCommand {
         Optional<pl.cramber.assetstore.entity.User> dbUserOpt = userRepository.findByDiscordId(discordId);
 
         if (dbUserOpt.isEmpty()) {
-            event.reply("You are not registered in our database. Please log in on our website first to link your account.")
+            event.getHook().sendMessage("You are not registered in our database. Please log in on our website first to link your account.")
                     .setComponents(ActionRow.of(Button.link(frontendUrl, "Log In")))
-                    .setEphemeral(true)
                     .queue();
             return;
         }
@@ -79,17 +80,14 @@ public class VerifyCommand implements BotCommand {
         pl.cramber.assetstore.entity.User dbUser = dbUserOpt.get();
 
         if (dbUser.getRobloxId() == null) {
-            event.reply("You haven't linked your Roblox account yet. Please visit your dashboard to connect it.")
+            event.getHook().sendMessage("You haven't linked your Roblox account yet. Please visit your dashboard to connect it.")
                     .setComponents(ActionRow.of(Button.link(frontendUrl + "/dashboard", "Link Roblox")))
-                    .setEphemeral(true)
                     .queue();
             return;
         }
 
         if (isVerified && !hasUnverifiedRole) {
-            event.reply("You are already fully verified and your roles are up to date!")
-                    .setEphemeral(true)
-                    .queue();
+            event.getHook().sendMessage("You are already fully verified and your roles are up to date!").queue();
             return;
         }
 
@@ -113,6 +111,8 @@ public class VerifyCommand implements BotCommand {
             member.modifyNickname(newNick).queue();
         } catch (Exception ignored) {}
 
+        event.getHook().sendMessage("You have been successfully verified!").queue();
+
         if (verifyChannelId != null && !verifyChannelId.isEmpty()) {
             TextChannel channel = guild.getTextChannelById(verifyChannelId);
             if (channel != null) {
@@ -128,7 +128,5 @@ public class VerifyCommand implements BotCommand {
                 channel.sendMessageEmbeds(publicEmbed.build()).queue();
             }
         }
-
-        event.reply("You have been successfully verified!").setEphemeral(true).queue();
     }
 }

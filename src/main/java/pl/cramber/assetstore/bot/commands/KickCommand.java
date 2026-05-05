@@ -32,28 +32,34 @@ public class KickCommand implements BotCommand {
 
     @Override
     public void execute(SlashCommandInteractionEvent event) {
+        event.deferReply().queue();
+
         String executorId = event.getUser().getId();
         Optional<pl.cramber.assetstore.entity.User> executorOpt = userRepository.findByDiscordId(executorId);
 
         if (executorOpt.isEmpty()) {
-            event.reply("You do not have permission to use this command.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("You do not have permission to use this command.").setEphemeral(true).queue();
             return;
         }
 
         String executorRole = executorOpt.get().getRole();
         if (!"SUPERADMIN".equals(executorRole) && !"ADMIN".equals(executorRole) && !"MODERATOR".equals(executorRole)) {
-            event.reply("You do not have permission to use this command.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("You do not have permission to use this command.").setEphemeral(true).queue();
             return;
         }
 
         Member targetMember = event.getOption("user").getAsMember();
         if (targetMember == null) {
-            event.reply("User is not in the server.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("User is not in the server.").setEphemeral(true).queue();
             return;
         }
 
         if (!event.getMember().canInteract(targetMember)) {
-            event.reply("You cannot moderate this user due to Discord role hierarchy.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("You cannot moderate this user due to Discord role hierarchy.").setEphemeral(true).queue();
             return;
         }
 
@@ -66,9 +72,12 @@ public class KickCommand implements BotCommand {
                     EmbedBuilder embed = new EmbedBuilder()
                             .setColor(Color.RED)
                             .setDescription("Successfully kicked " + targetMember.getAsMention() + ".");
-                    event.replyEmbeds(embed.build()).queue();
+                    event.getHook().editOriginalEmbeds(embed.build()).queue();
                 },
-                error -> event.reply("Failed to kick user. Check my role hierarchy and permissions.").setEphemeral(true).queue()
+                error -> {
+                    event.getHook().deleteOriginal().queue();
+                    event.getHook().sendMessage("Failed to kick user. Check my role hierarchy and permissions.").setEphemeral(true).queue();
+                }
         );
     }
 }

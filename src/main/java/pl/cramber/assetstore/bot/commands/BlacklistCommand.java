@@ -37,17 +37,21 @@ public class BlacklistCommand implements BotCommand {
 
     @Override
     public void execute(SlashCommandInteractionEvent event) {
+        event.deferReply().queue();
+
         String executorId = event.getUser().getId();
         Optional<pl.cramber.assetstore.entity.User> executorOpt = userRepository.findByDiscordId(executorId);
 
         if (executorOpt.isEmpty()) {
-            event.reply("You do not have permission to use this command.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("You do not have permission to use this command.").setEphemeral(true).queue();
             return;
         }
 
         String executorRole = executorOpt.get().getRole();
         if (!"SUPERADMIN".equals(executorRole)) {
-            event.reply("You do not have permission to use this command. Superadmin only.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("You do not have permission to use this command. Superadmin only.").setEphemeral(true).queue();
             return;
         }
 
@@ -55,21 +59,18 @@ public class BlacklistCommand implements BotCommand {
         Member targetMember = event.getOption("user").getAsMember();
 
         if (targetMember != null && !event.getMember().canInteract(targetMember)) {
-            event.reply("You cannot moderate this user due to Discord role hierarchy.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("You cannot moderate this user due to Discord role hierarchy.").setEphemeral(true).queue();
             return;
         }
 
         String reason = event.getOption("reason") != null ? event.getOption("reason").getAsString() : "No reason provided";
 
         if (blacklistEntryRepository.findByDiscordIdAndIsActiveTrue(targetUser.getId()).isPresent()) {
-            event.reply("User is already in the active blacklist database.").setEphemeral(true).queue();
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("User is already in the active blacklist database.").setEphemeral(true).queue();
             return;
         }
-
-        EmbedBuilder publicReply = new EmbedBuilder()
-                .setColor(Color.RED)
-                .setDescription("Successfully blacklisted and banned " + targetUser.getAsMention() + ".");
-        event.replyEmbeds(publicReply.build()).queue();
 
         EmbedBuilder dmEmbed = new EmbedBuilder()
                 .setTitle("Moderation Notice")
@@ -80,8 +81,20 @@ public class BlacklistCommand implements BotCommand {
 
         Runnable executeBanAndLog = () -> {
             event.getGuild().ban(targetUser, 0, TimeUnit.DAYS).reason(reason).queue(
-                    success -> saveAndLog(event, targetUser, executorId, reason),
-                    error -> saveAndLog(event, targetUser, executorId, reason)
+                    success -> {
+                        saveAndLog(event, targetUser, executorId, reason);
+                        EmbedBuilder publicReply = new EmbedBuilder()
+                                .setColor(Color.RED)
+                                .setDescription("Successfully blacklisted and banned " + targetUser.getAsMention() + ".");
+                        event.getHook().editOriginalEmbeds(publicReply.build()).queue();
+                    },
+                    error -> {
+                        saveAndLog(event, targetUser, executorId, reason);
+                        EmbedBuilder publicReply = new EmbedBuilder()
+                                .setColor(Color.RED)
+                                .setDescription("Successfully blacklisted and banned " + targetUser.getAsMention() + ".");
+                        event.getHook().editOriginalEmbeds(publicReply.build()).queue();
+                    }
             );
         };
 
