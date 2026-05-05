@@ -37,7 +37,7 @@ public class MyPurchasesCommand implements BotCommand {
 
     @Override
     public void execute(SlashCommandInteractionEvent event) {
-        event.deferReply().setEphemeral(true).queue();
+        event.deferReply().queue();
         handlePage(event.getUser().getId(), 0, event);
     }
 

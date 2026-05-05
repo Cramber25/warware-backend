@@ -40,7 +40,7 @@ public class CheckUserCommand implements BotCommand {
 
     @Override
     public void execute(SlashCommandInteractionEvent event) {
-        event.deferReply().setEphemeral(true).queue();
+        event.deferReply().queue();
 
         String executorDiscordId = event.getUser().getId();
         Optional<pl.cramber.assetstore.entity.User> executorOpt = userRepository.findByDiscordId(executorDiscordId);
