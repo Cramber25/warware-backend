@@ -1,7 +1,11 @@
 package pl.cramber.assetstore.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,43 +16,44 @@ import org.springframework.web.util.HtmlUtils;
 import pl.cramber.assetstore.entity.Asset;
 import pl.cramber.assetstore.repository.AssetRepository;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Matcher;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "discord.bot.enabled", havingValue = "false", matchIfMissing = true)
 public class SeoController {
 
     private final AssetRepository assetRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final RestTemplate restTemplate = new RestTemplate();
+
+    private String cachedHtml = null;
+    private long cacheLastFetched = 0;
+    private static final long CACHE_DURATION_MS = 60 * 1000 * 5;
 
     @GetMapping(value = "/asset/{id}", produces = MediaType.TEXT_HTML_VALUE)
     public ResponseEntity<String> getAssetPage(@PathVariable String id) {
-        String frontendUrl = "http://roblox_store_frontend:80/index.html";
-        String html;
-
-        try {
-            html = restTemplate.getForObject(frontendUrl, String.class);
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body("Error loading frontend index.html");
-        }
+        String html = getFrontendHtml();
 
         if (html == null) {
-            return ResponseEntity.status(500).body("Frontend returned empty response");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Frontend returned empty response");
         }
 
         UUID assetId;
         try {
             assetId = UUID.fromString(id);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.ok(html);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(html);
         }
 
         Asset asset = assetRepository.findById(assetId).orElse(null);
 
         if (asset == null || "ARCHIVED".equals(asset.getVisibility()) || "PRIVATE".equals(asset.getVisibility())) {
-            return ResponseEntity.ok(html);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(html);
         }
 
         String description = cleanMarkdown(asset.getDescription());
@@ -65,9 +70,24 @@ public class SeoController {
         return ResponseEntity.ok(injectMetaTags(html, safeTitle, safeDescription, safeImage, jsonLd));
     }
 
+    private String getFrontendHtml() {
+        if (cachedHtml != null && (System.currentTimeMillis() - cacheLastFetched) < CACHE_DURATION_MS) {
+            return cachedHtml;
+        }
+
+        try {
+            String frontendUrl = "http://roblox_store_frontend:80/index.html";
+            cachedHtml = restTemplate.getForObject(frontendUrl, String.class);
+            cacheLastFetched = System.currentTimeMillis();
+        } catch (Exception e) {
+            log.error("Error loading frontend index.html", e);
+        }
+        return cachedHtml;
+    }
+
     private String cleanMarkdown(String markdown) {
         if (markdown == null) return "";
-        return markdown.replaceAll("[#*_\\->\\[\\]()]", "")
+        return markdown.replaceAll("[#*_>\\[\\]]", "")
                 .replace("\n", " ")
                 .replace("\r", " ")
                 .replaceAll("\\s+", " ")
@@ -75,59 +95,57 @@ public class SeoController {
     }
 
     private String buildProductJsonLd(Asset asset, String cleanDescription) {
-        String jsonTitle = asset.getTitle().replace("\"", "\\\"");
-        String priceString = String.valueOf(asset.getPrice());
-        String jsonImage = asset.getThumbnailUrl() != null ? asset.getThumbnailUrl() : "";
+        Map<String, Object> jsonLd = new HashMap<>();
+        jsonLd.put("@context", "https://schema.org/");
+        jsonLd.put("@type", "Product");
+        jsonLd.put("name", asset.getTitle());
+        jsonLd.put("image", asset.getThumbnailUrl() != null ? asset.getThumbnailUrl() : "");
+        jsonLd.put("description", cleanDescription + " | Price: " + asset.getPrice() + " Robux.");
 
-        String enhancedDescription = cleanDescription + " | Price: " + priceString + " Robux.";
-        String jsonDesc = enhancedDescription.replace("\"", "\\\"");
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("{\n");
-        sb.append("  \"@context\": \"https://schema.org/\",\n");
-        sb.append("  \"@type\": \"Product\",\n");
-        sb.append("  \"name\": \"").append(jsonTitle).append("\",\n");
-        sb.append("  \"image\": \"").append(jsonImage).append("\",\n");
-        sb.append("  \"description\": \"").append(jsonDesc).append("\",\n");
-        sb.append("  \"offers\": {\n");
-        sb.append("    \"@type\": \"Offer\",\n");
-        sb.append("    \"price\": \"").append(priceString).append("\",\n");
-        sb.append("    \"availability\": \"https://schema.org/InStock\"\n");
-        sb.append("  }");
+        Map<String, Object> offer = new HashMap<>();
+        offer.put("@type", "Offer");
+        offer.put("price", asset.getPrice());
+        offer.put("priceCurrency", "USD");
+        offer.put("availability", "https://schema.org/InStock");
+        jsonLd.put("offers", offer);
 
         if (asset.getRatingCount() != null && asset.getRatingCount() > 0) {
-            sb.append(",\n  \"aggregateRating\": {\n");
-            sb.append("    \"@type\": \"AggregateRating\",\n");
-            sb.append("    \"ratingValue\": \"").append(Math.round(asset.getAverageRating() * 10.0) / 10.0).append("\",\n");
-            sb.append("    \"reviewCount\": \"").append(asset.getRatingCount()).append("\"\n");
-            sb.append("  }\n");
-        } else {
-            sb.append("\n");
+            Map<String, Object> rating = new HashMap<>();
+            rating.put("@type", "AggregateRating");
+            rating.put("ratingValue", Math.round(asset.getAverageRating() * 10.0) / 10.0);
+            rating.put("reviewCount", asset.getRatingCount());
+            jsonLd.put("aggregateRating", rating);
         }
 
-        sb.append("}");
-
-        return sb.toString();
+        try {
+            return objectMapper.writeValueAsString(jsonLd);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to generate JSON-LD", e);
+            return "{}";
+        }
     }
 
     private String injectMetaTags(String html, String title, String description, String image, String jsonLd) {
-
         String jsonLdScript = "<script type=\"application/ld+json\">\n" + jsonLd + "\n</script>";
 
-        String injectedHtml = html
-                .replaceAll("<title>.*?</title>", Matcher.quoteReplacement("<title>" + title + "</title>"))
+        StringBuilder seoTags = new StringBuilder();
+        seoTags.append("<title>").append(title).append("</title>\n");
+        seoTags.append("<meta name=\"title\" content=\"").append(title).append("\" />\n");
+        seoTags.append("<meta name=\"description\" content=\"").append(description).append("\" />\n");
 
-                .replaceAll("<meta\\s+name=\"title\"\\s+content=\".*?\"\\s*/?>", Matcher.quoteReplacement("<meta name=\"title\" content=\"" + title + "\" />"))
-                .replaceAll("<meta\\s+name=\"description\"\\s+content=\".*?\"\\s*/?>", Matcher.quoteReplacement("<meta name=\"description\" content=\"" + description + "\" />"))
+        seoTags.append("<meta property=\"og:title\" content=\"").append(title).append("\" />\n");
+        seoTags.append("<meta property=\"og:description\" content=\"").append(description).append("\" />\n");
+        seoTags.append("<meta property=\"og:image\" content=\"").append(image).append("\" />\n");
+        seoTags.append("<meta property=\"og:type\" content=\"product\" />\n");
 
-                .replaceAll("<meta\\s+property=\"og:title\"\\s+content=\".*?\"\\s*/?>", Matcher.quoteReplacement("<meta property=\"og:title\" content=\"" + title + "\" />"))
-                .replaceAll("<meta\\s+property=\"og:description\"\\s+content=\".*?\"\\s*/?>", Matcher.quoteReplacement("<meta property=\"og:description\" content=\"" + description + "\" />"))
-                .replaceAll("<meta\\s+property=\"og:image\"\\s+content=\".*?\"\\s*/?>", Matcher.quoteReplacement("<meta property=\"og:image\" content=\"" + image + "\" />"))
+        seoTags.append("<meta property=\"twitter:card\" content=\"summary_large_image\" />\n");
+        seoTags.append("<meta property=\"twitter:title\" content=\"").append(title).append("\" />\n");
+        seoTags.append("<meta property=\"twitter:description\" content=\"").append(description).append("\" />\n");
+        seoTags.append("<meta property=\"twitter:image\" content=\"").append(image).append("\" />\n");
 
-                .replaceAll("<meta\\s+property=\"twitter:title\"\\s+content=\".*?\"\\s*/?>", Matcher.quoteReplacement("<meta property=\"twitter:title\" content=\"" + title + "\" />"))
-                .replaceAll("<meta\\s+property=\"twitter:description\"\\s+content=\".*?\"\\s*/?>", Matcher.quoteReplacement("<meta property=\"twitter:description\" content=\"" + description + "\" />"))
-                .replaceAll("<meta\\s+property=\"twitter:image\"\\s+content=\".*?\"\\s*/?>", Matcher.quoteReplacement("<meta property=\"twitter:image\" content=\"" + image + "\" />"));
+        seoTags.append(jsonLdScript).append("\n");
 
-        return injectedHtml.replaceFirst("</head>", Matcher.quoteReplacement(jsonLdScript + "\n</head>"));
+        String cleanedHtml = html.replaceAll("<title>.*?</title>", "");
+        return cleanedHtml.replaceFirst("</head>", Matcher.quoteReplacement(seoTags.toString() + "</head>"));
     }
 }
