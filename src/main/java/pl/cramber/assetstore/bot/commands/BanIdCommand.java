@@ -13,6 +13,7 @@ import pl.cramber.assetstore.entity.TempBan;
 import pl.cramber.assetstore.repository.TempBanRepository;
 import pl.cramber.assetstore.repository.UserRepository;
 import pl.cramber.assetstore.service.ModerationService;
+import pl.cramber.assetstore.util.TimeUtils;
 
 import java.awt.Color;
 import java.time.Duration;
@@ -61,7 +62,7 @@ public class BanIdCommand implements BotCommand {
         String reason = event.getOption("reason") != null ? event.getOption("reason").getAsString() : "No reason provided";
         String timeStr = event.getOption("time") != null ? event.getOption("time").getAsString() : null;
 
-        Duration duration = parseDuration(timeStr);
+        Duration duration = TimeUtils.parseDuration(timeStr);
         if (timeStr != null && duration == null) {
             event.getHook().deleteOriginal().queue();
             event.getHook().sendMessage("Invalid time format. Please use formats like `1h`, `1d`, `1w`.").setEphemeral(true).queue();
@@ -112,24 +113,5 @@ public class BanIdCommand implements BotCommand {
                 },
                 error -> executeBanAndLog.run()
         );
-    }
-
-    private Duration parseDuration(String input) {
-        if (input == null || input.isEmpty()) return null;
-        try {
-            char unit = input.charAt(input.length() - 1);
-            long amount = Long.parseLong(input.substring(0, input.length() - 1));
-            return switch (unit) {
-                case 's' -> Duration.ofSeconds(amount);
-                case 'm' -> Duration.ofMinutes(amount);
-                case 'h' -> Duration.ofHours(amount);
-                case 'd' -> Duration.ofDays(amount);
-                case 'w' -> Duration.ofDays(amount * 7);
-                case 'M' -> Duration.ofDays(amount * 30);
-                default -> Duration.ofMinutes(Long.parseLong(input));
-            };
-        } catch (Exception e) {
-            return null;
-        }
     }
 }

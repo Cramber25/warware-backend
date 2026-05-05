@@ -11,6 +11,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import pl.cramber.assetstore.repository.UserRepository;
 import pl.cramber.assetstore.service.ModerationService;
+import pl.cramber.assetstore.util.TimeUtils;
 
 import java.awt.Color;
 import java.time.Duration;
@@ -68,7 +69,7 @@ public class MuteCommand implements BotCommand {
         String timeStr = event.getOption("time").getAsString();
         String reason = event.getOption("reason") != null ? event.getOption("reason").getAsString() : "No reason provided";
 
-        Duration duration = parseDuration(timeStr);
+        Duration duration = TimeUtils.parseDuration(timeStr);
         if (duration == null) {
             event.getHook().deleteOriginal().queue();
             event.getHook().sendMessage("Invalid time format. Please use formats like `10m`, `1h`, `1d`.").setEphemeral(true).queue();
@@ -89,22 +90,5 @@ public class MuteCommand implements BotCommand {
                     event.getHook().sendMessage("Failed to mute user. Check my role hierarchy and permissions.").setEphemeral(true).queue();
                 }
         );
-    }
-
-    private Duration parseDuration(String input) {
-        if (input == null || input.isEmpty()) return null;
-        try {
-            char unit = input.charAt(input.length() - 1);
-            long amount = Long.parseLong(input.substring(0, input.length() - 1));
-            return switch (unit) {
-                case 's' -> Duration.ofSeconds(amount);
-                case 'm' -> Duration.ofMinutes(amount);
-                case 'h' -> Duration.ofHours(amount);
-                case 'd' -> Duration.ofDays(amount);
-                default -> Duration.ofMinutes(Long.parseLong(input));
-            };
-        } catch (Exception e) {
-            return null;
-        }
     }
 }

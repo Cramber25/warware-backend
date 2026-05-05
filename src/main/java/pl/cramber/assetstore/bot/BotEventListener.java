@@ -86,6 +86,13 @@ public class BotEventListener extends ListenerAdapter {
                     }
                 }
 
+                if (unverifiedRoleId != null && !unverifiedRoleId.isEmpty()) {
+                    Role unverifiedRole = guild.getRoleById(unverifiedRoleId);
+                    if (unverifiedRole != null && member.getRoles().contains(unverifiedRole)) {
+                        guild.removeRoleFromMember(member, unverifiedRole).queue(null, e -> log.warn("Failed to remove unverified role"));
+                    }
+                }
+
                 if (robloxUsername != null) {
                     String newNick = robloxUsername.length() > 32 ? robloxUsername.substring(0, 32) : robloxUsername;
                     member.modifyNickname(newNick).queue(null, e -> log.warn("Failed to modify nickname (hierarchy/perms)"));
