@@ -124,6 +124,8 @@ public class PurchaseService {
             order.setStatus("COMPLETED");
             orderRepository.save(order);
             statusResult = "SUCCESS";
+
+            discordNotificationService.sendOrderCompleteDM(user.getDiscordId(), asset.getTitle());
         } else {
             orderRepository.save(order);
             ticketRepository.save(Ticket.builder().order(order).status("OPEN").build());

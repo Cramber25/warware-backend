@@ -7,7 +7,6 @@ import org.springframework.transaction.annotation.Transactional;
 import pl.cramber.assetstore.entity.*;
 import pl.cramber.assetstore.repository.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -18,38 +17,54 @@ public class TicketService {
     private final TicketRepository ticketRepository;
     private final TicketMessageRepository messageRepository;
     private final OrderRepository orderRepository;
-    private final R2StorageService r2StorageService;
+    private final UserRepository userRepository;
+    private final TransactionRepository transactionRepository;
+    private final DiscordNotificationService discordNotificationService;
 
-    public void addMessage(UUID ticketId, User sender, String content) {
-        Ticket ticket = ticketRepository.findById(ticketId).orElseThrow();
+    @Transactional
+    public TicketMessage sendMessage(Ticket ticket, User sender, String content) {
         TicketMessage message = TicketMessage.builder()
                 .ticket(ticket)
                 .sender(sender)
                 .content(content)
                 .build();
-        messageRepository.save(message);
-    }
-
-    public List<TicketMessage> getChatHistory(UUID ticketId) {
-        return messageRepository.findAllByTicketIdOrderByCreatedAtAsc(ticketId);
+        return messageRepository.save(message);
     }
 
     @Transactional
-    public String approveTicket(UUID ticketId, User admin) {
-        Ticket ticket = ticketRepository.findById(ticketId).orElseThrow();
-        Asset asset = ticket.getOrder().getAsset();
-
-        if ("ADMIN".equals(admin.getRole()) && !asset.getCreator().getId().equals(admin.getId())) {
-            throw new RuntimeException("UNAUTHORIZED_APPROVAL");
-        }
+    public Order approveTicket(Ticket ticket) {
+        ticket.setStatus("CLOSED");
 
         Order order = ticket.getOrder();
         order.setStatus("COMPLETED");
+
+        ticketRepository.save(ticket);
         orderRepository.save(order);
 
-        ticket.setStatus("CLOSED_APPROVED");
-        ticketRepository.save(ticket);
+        discordNotificationService.sendOrderCompleteDM(order.getUser().getDiscordId(), order.getAsset().getTitle());
 
-        return r2StorageService.generatePresignedUrl(asset.getR2FileKey(), 30);
+        return order;
+    }
+
+    @Transactional
+    public Order rejectTicket(Ticket ticket) {
+        ticket.setStatus("CLOSED");
+
+        Order order = ticket.getOrder();
+        order.setStatus("CANCELLED");
+
+        User buyer = order.getUser();
+        int refundAmount = order.getAsset().getPrice();
+        buyer.setBalance(buyer.getBalance() + refundAmount);
+        userRepository.save(buyer);
+
+        transactionRepository.save(Transaction.builder()
+                .user(buyer)
+                .amount(refundAmount)
+                .type("REFUND")
+                .build());
+
+        ticketRepository.save(ticket);
+        return orderRepository.save(order);
     }
 }
