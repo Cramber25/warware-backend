@@ -85,14 +85,18 @@ public class BlacklistCommand implements BotCommand {
                         saveAndLog(event, targetUser, executorId, reason);
                         EmbedBuilder publicReply = new EmbedBuilder()
                                 .setColor(Color.RED)
-                                .setDescription("Successfully blacklisted and banned " + targetUser.getAsMention() + ".");
+                                .setTitle("BLACKLIST")
+                                .setDescription("Successfully blacklisted and banned " + targetUser.getAsMention() + ".")
+                                .addField("Reason", reason, false);
                         event.getHook().editOriginalEmbeds(publicReply.build()).queue();
                     },
                     error -> {
                         saveAndLog(event, targetUser, executorId, reason);
                         EmbedBuilder publicReply = new EmbedBuilder()
                                 .setColor(Color.RED)
-                                .setDescription("Successfully blacklisted and banned " + targetUser.getAsMention() + ".");
+                                .setTitle("BLACKLIST")
+                                .setDescription("Successfully blacklisted and banned " + targetUser.getAsMention() + ".")
+                                .addField("Reason", reason, false);
                         event.getHook().editOriginalEmbeds(publicReply.build()).queue();
                     }
             );

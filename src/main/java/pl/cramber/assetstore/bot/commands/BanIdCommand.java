@@ -87,7 +87,11 @@ public class BanIdCommand implements BotCommand {
 
                         EmbedBuilder embed = new EmbedBuilder()
                                 .setColor(Color.RED)
-                                .setDescription("Successfully banned <@" + targetId + "> for " + durationDisplay + ".");
+                                .setTitle("BAN")
+                                .setDescription("Successfully banned <@" + targetId + ">.")
+                                .addField("Reason", reason, false)
+                                .addField("Duration", durationDisplay, true);
+
                         event.getHook().editOriginalEmbeds(embed.build()).queue();
                     },
                     error -> {

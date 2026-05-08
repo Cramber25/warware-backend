@@ -67,9 +67,9 @@ public class BlacklistIdCommand implements BotCommand {
 
         EmbedBuilder replyEmbed = new EmbedBuilder().setColor(Color.RED);
         if (finalDiscordId != null) {
-            replyEmbed.setDescription("Successfully blacklisted Roblox ID `" + robloxId + "` and banned Discord ID `<@" + finalDiscordId + ">`.");
+            replyEmbed.setTitle("BLACKLIST").setDescription("Successfully blacklisted Roblox ID `" + robloxId + "` and banned Discord ID `<@" + finalDiscordId + ">`.").addField("Reason", reason, false);
         } else {
-            replyEmbed.setDescription("Successfully blacklisted Roblox ID `" + robloxId + "`. No linked Discord account found.");
+            replyEmbed.setTitle("BLACKLIST").setDescription("Successfully blacklisted Roblox ID `" + robloxId + "`. No linked Discord account found.").addField("Reason", reason, false);
         }
 
         Runnable executeBanAndLog = () -> {

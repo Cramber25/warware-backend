@@ -71,7 +71,9 @@ public class KickCommand implements BotCommand {
 
                     EmbedBuilder embed = new EmbedBuilder()
                             .setColor(Color.RED)
-                            .setDescription("Successfully kicked " + targetMember.getAsMention() + ".");
+                            .setTitle("KICK")
+                            .setDescription("Successfully kicked " + targetMember.getAsMention() + ".")
+                            .addField("Reason", reason, false);
                     event.getHook().editOriginalEmbeds(embed.build()).queue();
                 },
                 error -> {

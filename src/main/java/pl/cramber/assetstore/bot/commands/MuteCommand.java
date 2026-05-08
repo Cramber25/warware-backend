@@ -82,7 +82,9 @@ public class MuteCommand implements BotCommand {
 
                     EmbedBuilder embed = new EmbedBuilder()
                             .setColor(Color.RED)
-                            .setDescription("Successfully muted " + targetMember.getAsMention() + " for " + timeStr + ".");
+                            .setTitle("MUTE")
+                            .setDescription("Successfully muted " + targetMember.getAsMention() + " for " + timeStr + ".")
+                            .addField("Reason", reason, false);
                     event.getHook().editOriginalEmbeds(embed.build()).queue();
                 },
                 error -> {

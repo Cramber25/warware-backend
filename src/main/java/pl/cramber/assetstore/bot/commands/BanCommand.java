@@ -113,7 +113,11 @@ public class BanCommand implements BotCommand {
 
                         EmbedBuilder embed = new EmbedBuilder()
                                 .setColor(Color.RED)
-                                .setDescription("Successfully banned " + targetUser.getAsMention() + " for " + durationDisplay + ".");
+                                .setTitle("BAN")
+                                .setDescription("Successfully banned " + targetUser.getAsMention() + ".")
+                                .addField("Reason", reason, false)
+                                .addField("Duration", durationDisplay, true);
+
                         event.getHook().sendMessageEmbeds(embed.build()).queue();
                     },
                     error -> {
