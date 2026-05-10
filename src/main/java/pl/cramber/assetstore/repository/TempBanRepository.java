@@ -14,4 +14,7 @@ public interface TempBanRepository extends JpaRepository<TempBan, UUID> {
     void deleteByDiscordIdAndGuildId(String discordId, String guildId);
     void deleteByDiscordId(String discordId);
     List<TempBan> findByDiscordId(String discordId);
+    List<TempBan> findAllByUnbanAtBeforeAndIsActiveTrue(ZonedDateTime time);
+    List<TempBan> findAllByDiscordIdAndIsActiveTrue(String discordId);
+    List<TempBan> findAllByDiscordIdOrderByCreatedAtDesc(String discordId);
 }

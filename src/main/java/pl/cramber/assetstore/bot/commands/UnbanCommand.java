@@ -10,11 +10,13 @@ import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import pl.cramber.assetstore.entity.TempBan;
 import pl.cramber.assetstore.repository.TempBanRepository;
 import pl.cramber.assetstore.repository.UserRepository;
 import pl.cramber.assetstore.service.ModerationService;
 
 import java.awt.Color;
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -59,12 +61,22 @@ public class UnbanCommand implements BotCommand {
 
         event.getGuild().unban(UserSnowflake.fromId(targetId)).reason(reason).queue(
                 success -> {
-                    tempBanRepository.deleteByDiscordIdAndGuildId(targetId, event.getGuild().getId());
+                    List<TempBan> activeBans = tempBanRepository.findAllByDiscordIdAndIsActiveTrue(targetId);
+                    for (TempBan ban : activeBans) {
+                        ban.setActive(false);
+                        tempBanRepository.save(ban);
+                    }
+
+                    userRepository.findByDiscordId(targetId).ifPresent(u -> {
+                        u.setBanned(false);
+                        userRepository.save(u);
+                    });
+
                     moderationService.logWithoutDM(targetId, "Unknown", "<@" + targetId + ">", event.getUser(), "UNBAN", reason, null);
 
                     EmbedBuilder embed = new EmbedBuilder()
                             .setColor(Color.GREEN)
-                            .setDescription("Successfully unbanned <@" + targetId + ">.");
+                            .setDescription("Successfully unbanned <@" + targetId + "> and cleared active ban records.");
                     event.getHook().editOriginalEmbeds(embed.build()).queue();
                 },
                 error -> {

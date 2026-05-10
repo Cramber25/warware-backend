@@ -2,6 +2,7 @@ package pl.cramber.assetstore.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.ZonedDateTime;
 import java.util.UUID;
@@ -28,6 +29,17 @@ public class TempBan {
     @Column(name = "guild_id", nullable = false)
     private String guildId;
 
-    @Column(name = "unban_at", nullable = false)
+    @Column(name = "reason", columnDefinition = "TEXT")
+    private String reason;
+
+    @Column(name = "unban_at")
     private ZonedDateTime unbanAt;
+
+    @Column(name = "is_active", nullable = false)
+    @Builder.Default
+    private boolean isActive = true;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private ZonedDateTime createdAt;
 }

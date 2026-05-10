@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import pl.cramber.assetstore.entity.BlacklistEntry;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -16,9 +17,11 @@ public interface BlacklistEntryRepository extends JpaRepository<BlacklistEntry, 
 
     boolean existsByRobloxIdAndIsActiveTrue(String robloxId);
 
-    Optional<BlacklistEntry> findByDiscordIdAndIsActiveTrue(String discordId);
+    List<BlacklistEntry> findAllByDiscordIdAndIsActiveTrue(String discordId);
 
-    Optional<BlacklistEntry> findByRobloxIdAndIsActiveTrue(String robloxId);
+    List<BlacklistEntry> findAllByRobloxIdAndIsActiveTrue(String robloxId);
+
+    List<BlacklistEntry> findAllByDiscordIdOrderByCreatedAtDesc(String discordId);
 
     @Query("SELECT b FROM BlacklistEntry b WHERE LOWER(b.robloxUsername) LIKE LOWER(CONCAT('%', :search, '%')) " +
             "OR LOWER(b.discordId) LIKE LOWER(CONCAT('%', :search, '%')) " +

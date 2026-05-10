@@ -59,6 +59,13 @@ public class BanIdCommand implements BotCommand {
         }
 
         String targetId = event.getOption("discord_id").getAsString();
+
+        if (!tempBanRepository.findAllByDiscordIdAndIsActiveTrue(targetId).isEmpty()) {
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("This ID already has an active ban. Please unban them first before issuing a new ban.").setEphemeral(true).queue();
+            return;
+        }
+
         String reason = event.getOption("reason") != null ? event.getOption("reason").getAsString() : "No reason provided";
         String timeStr = event.getOption("time") != null ? event.getOption("time").getAsString() : null;
 
@@ -75,13 +82,13 @@ public class BanIdCommand implements BotCommand {
         Runnable executeBanAndLog = () -> {
             event.getGuild().ban(UserSnowflake.fromId(targetId), 0, TimeUnit.DAYS).reason(reason).queue(
                     success -> {
-                        if (unbanAt != null) {
-                            tempBanRepository.save(TempBan.builder()
-                                    .discordId(targetId)
-                                    .guildId(event.getGuild().getId())
-                                    .unbanAt(unbanAt)
-                                    .build());
-                        }
+                        tempBanRepository.save(TempBan.builder()
+                                .discordId(targetId)
+                                .guildId(event.getGuild().getId())
+                                .reason(reason)
+                                .unbanAt(unbanAt)
+                                .isActive(true)
+                                .build());
 
                         moderationService.logWithoutDM(targetId, "Unknown", "<@" + targetId + ">", event.getUser(), "BAN", reason, durationDisplay);
 

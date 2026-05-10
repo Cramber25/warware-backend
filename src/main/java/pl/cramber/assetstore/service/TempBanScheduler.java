@@ -34,7 +34,7 @@ public class TempBanScheduler {
         JDA jda = botManager.getJda();
         if (jda == null) return;
 
-        List<TempBan> expiredBans = tempBanRepository.findAllByUnbanAtBefore(ZonedDateTime.now());
+        List<TempBan> expiredBans = tempBanRepository.findAllByUnbanAtBeforeAndIsActiveTrue(ZonedDateTime.now());
 
         for (TempBan ban : expiredBans) {
             Guild guild = jda.getGuildById(ban.getGuildId());
@@ -44,7 +44,8 @@ public class TempBanScheduler {
                         error -> logUnban(ban)
                 );
             }
-            tempBanRepository.delete(ban);
+            ban.setActive(false);
+            tempBanRepository.save(ban);
         }
     }
 

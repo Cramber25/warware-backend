@@ -15,6 +15,8 @@ import pl.cramber.assetstore.repository.UserRepository;
 import pl.cramber.assetstore.service.ModerationService;
 
 import java.awt.Color;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -55,48 +57,56 @@ public class RemoveBlacklistCommand implements BotCommand {
             return;
         }
 
-        Optional<BlacklistEntry> entryOpt = Optional.empty();
+        List<BlacklistEntry> activeEntries = new ArrayList<>();
 
         if (discordId != null) {
-            entryOpt = blacklistEntryRepository.findByDiscordIdAndIsActiveTrue(discordId);
-        } else {
-            entryOpt = blacklistEntryRepository.findByRobloxIdAndIsActiveTrue(robloxId);
+            activeEntries = blacklistEntryRepository.findAllByDiscordIdAndIsActiveTrue(discordId);
+        } else if (robloxId != null) {
+            activeEntries = blacklistEntryRepository.findAllByRobloxIdAndIsActiveTrue(robloxId);
         }
 
-        if (entryOpt.isEmpty()) {
+        if (activeEntries.isEmpty()) {
             event.getHook().deleteOriginal().queue();
-            event.getHook().sendMessage("No active blacklist entry found for the provided details.").setEphemeral(true).queue();
+            event.getHook().sendMessage("No active blacklist entries found for the provided details.").setEphemeral(true).queue();
             return;
         }
 
-        BlacklistEntry entry = entryOpt.get();
-        entry.setActive(false);
-        blacklistEntryRepository.save(entry);
+        String targetDiscordId = null;
+        String targetRobloxId = null;
+        String targetName = "Unknown";
 
-        if (entry.getDiscordId() != null && !entry.getDiscordId().isEmpty()) {
-            userRepository.findByDiscordId(entry.getDiscordId()).ifPresent(u -> {
+        for (BlacklistEntry entry : activeEntries) {
+            entry.setActive(false);
+            blacklistEntryRepository.save(entry);
+
+            if (entry.getDiscordId() != null && !entry.getDiscordId().isEmpty()) targetDiscordId = entry.getDiscordId();
+            if (entry.getRobloxId() != null && !entry.getRobloxId().isEmpty()) targetRobloxId = entry.getRobloxId();
+            if (entry.getRobloxUsername() != null) targetName = entry.getRobloxUsername();
+        }
+
+        if (targetDiscordId != null) {
+            userRepository.findByDiscordId(targetDiscordId).ifPresent(u -> {
                 u.setBanned(false);
                 userRepository.save(u);
             });
-            event.getGuild().unban(UserSnowflake.fromId(entry.getDiscordId())).queue(null, err -> {});
+            event.getGuild().unban(UserSnowflake.fromId(targetDiscordId)).queue(null, err -> {});
         }
 
-        if (entry.getRobloxId() != null && !entry.getRobloxId().isEmpty()) {
-            userRepository.findByRobloxId(entry.getRobloxId()).ifPresent(u -> {
+        if (targetRobloxId != null) {
+            userRepository.findByRobloxId(targetRobloxId).ifPresent(u -> {
                 u.setBanned(false);
                 userRepository.save(u);
             });
         }
 
-        String targetId = entry.getDiscordId() != null ? entry.getDiscordId() : entry.getRobloxId();
-        String targetName = entry.getRobloxUsername() != null ? entry.getRobloxUsername() : "Unknown";
-        String targetMention = entry.getDiscordId() != null && !entry.getDiscordId().startsWith("DUMMY_") ? "<@" + entry.getDiscordId() + ">" : "Roblox ID: " + entry.getRobloxId();
+        String finalTargetId = targetDiscordId != null ? targetDiscordId : targetRobloxId;
+        String targetMention = targetDiscordId != null && !targetDiscordId.startsWith("DUMMY_") ? "<@" + targetDiscordId + ">" : "Roblox ID: " + targetRobloxId;
 
-        moderationService.logWithoutDM(targetId, targetName, targetMention, event.getUser(), "REMOVE BLACKLIST (UNBAN)", "Blacklist revoked.", null);
+        moderationService.logWithoutDM(finalTargetId, targetName, targetMention, event.getUser(), "REMOVE BLACKLIST (UNBAN)", "Blacklist revoked and active entries cleared.", null);
 
         EmbedBuilder embed = new EmbedBuilder()
                 .setColor(Color.GREEN)
-                .setDescription("Successfully removed the active blacklist. The entry has been archived for history.");
+                .setDescription("Successfully removed the active blacklist. All entries have been archived for history.");
         event.getHook().editOriginalEmbeds(embed.build()).queue();
     }
 }

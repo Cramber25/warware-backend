@@ -28,26 +28,30 @@ public class PenaltyService {
     public List<PenaltyDto> getUserPenalties(User user) {
         List<PenaltyDto> penalties = new ArrayList<>();
 
-        blacklistEntryRepository.findByDiscordIdAndIsActiveTrue(user.getDiscordId()).ifPresent(blacklist -> {
+        blacklistEntryRepository.findAllByDiscordIdOrderByCreatedAtDesc(user.getDiscordId()).forEach(blacklist -> {
             Appeal appeal = appealRepository.findByReferenceId(blacklist.getId()).orElse(null);
             penalties.add(PenaltyDto.builder()
                     .id(blacklist.getId())
                     .type("BLACKLIST")
                     .reason(blacklist.getReason())
                     .expiresAt(null)
-                    .canAppeal(appeal == null)
+                    .createdAt(blacklist.getCreatedAt())
+                    .isActive(blacklist.isActive())
+                    .canAppeal(blacklist.isActive() && appeal == null)
                     .appeal(appeal != null ? AppealDto.fromEntity(appeal) : null)
                     .build());
         });
 
-        tempBanRepository.findByDiscordId(user.getDiscordId()).forEach(ban -> {
+        tempBanRepository.findAllByDiscordIdOrderByCreatedAtDesc(user.getDiscordId()).forEach(ban -> {
             Appeal appeal = appealRepository.findByReferenceId(ban.getId()).orElse(null);
             penalties.add(PenaltyDto.builder()
                     .id(ban.getId())
                     .type("BAN")
-                    .reason("Temporary Discord Ban")
+                    .reason(ban.getReason() != null ? ban.getReason() : "Discord Server Ban")
                     .expiresAt(ban.getUnbanAt())
-                    .canAppeal(appeal == null)
+                    .createdAt(ban.getCreatedAt())
+                    .isActive(ban.isActive())
+                    .canAppeal(ban.isActive() && appeal == null)
                     .appeal(appeal != null ? AppealDto.fromEntity(appeal) : null)
                     .build());
         });

@@ -42,14 +42,7 @@ public class BlacklistCommand implements BotCommand {
         String executorId = event.getUser().getId();
         Optional<pl.cramber.assetstore.entity.User> executorOpt = userRepository.findByDiscordId(executorId);
 
-        if (executorOpt.isEmpty()) {
-            event.getHook().deleteOriginal().queue();
-            event.getHook().sendMessage("You do not have permission to use this command.").setEphemeral(true).queue();
-            return;
-        }
-
-        String executorRole = executorOpt.get().getRole();
-        if (!"SUPERADMIN".equals(executorRole)) {
+        if (executorOpt.isEmpty() || !"SUPERADMIN".equals(executorOpt.get().getRole())) {
             event.getHook().deleteOriginal().queue();
             event.getHook().sendMessage("You do not have permission to use this command. Superadmin only.").setEphemeral(true).queue();
             return;
@@ -64,13 +57,13 @@ public class BlacklistCommand implements BotCommand {
             return;
         }
 
-        String reason = event.getOption("reason") != null ? event.getOption("reason").getAsString() : "No reason provided";
-
-        if (blacklistEntryRepository.findByDiscordIdAndIsActiveTrue(targetUser.getId()).isPresent()) {
+        if (!blacklistEntryRepository.findAllByDiscordIdAndIsActiveTrue(targetUser.getId()).isEmpty()) {
             event.getHook().deleteOriginal().queue();
             event.getHook().sendMessage("User is already in the active blacklist database.").setEphemeral(true).queue();
             return;
         }
+
+        String reason = event.getOption("reason") != null ? event.getOption("reason").getAsString() : "No reason provided";
 
         EmbedBuilder dmEmbed = new EmbedBuilder()
                 .setTitle("Moderation Notice")

@@ -29,6 +29,11 @@ public class AppealService {
     private final DiscordNotificationService discordNotificationService;
 
     @Transactional(readOnly = true)
+    public Page<AppealDto> getUserAppeals(UUID userId, Pageable pageable) {
+        return appealRepository.findByUserId(userId, pageable).map(AppealDto::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
     public Page<AppealDto> getAllAppeals(String status, Pageable pageable) {
         if (status != null && !status.isEmpty()) {
             return appealRepository.findByStatus(status, pageable).map(AppealDto::fromEntity);
@@ -57,7 +62,7 @@ public class AppealService {
             if (!exists) throw new RuntimeException("INVALID_BLACKLIST_REFERENCE");
         } else if ("BAN".equals(type)) {
             boolean exists = tempBanRepository.findById(referenceId)
-                    .map(b -> b.getDiscordId().equals(user.getDiscordId()))
+                    .map(b -> b.getDiscordId().equals(user.getDiscordId()) && b.isActive())
                     .orElse(false);
             if (!exists) throw new RuntimeException("INVALID_BAN_REFERENCE");
         } else {
@@ -100,15 +105,16 @@ public class AppealService {
             userRepository.save(user);
 
             discordNotificationService.revokeDiscordBan(user.getDiscordId());
-            tempBanRepository.deleteByDiscordId(user.getDiscordId());
 
-            if ("BLACKLIST".equals(appeal.getAppealType())) {
-                blacklistEntryRepository.findByDiscordIdAndIsActiveTrue(user.getDiscordId())
-                        .ifPresent(entry -> {
-                            entry.setActive(false);
-                            blacklistEntryRepository.save(entry);
-                        });
-            }
+            tempBanRepository.findAllByDiscordIdAndIsActiveTrue(user.getDiscordId()).forEach(ban -> {
+                ban.setActive(false);
+                tempBanRepository.save(ban);
+            });
+
+            blacklistEntryRepository.findAllByDiscordIdAndIsActiveTrue(user.getDiscordId()).forEach(entry -> {
+                entry.setActive(false);
+                blacklistEntryRepository.save(entry);
+            });
         }
 
         return AppealDto.fromEntity(appealRepository.save(appeal));

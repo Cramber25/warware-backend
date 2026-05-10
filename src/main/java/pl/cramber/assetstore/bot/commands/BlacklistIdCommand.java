@@ -50,13 +50,20 @@ public class BlacklistIdCommand implements BotCommand {
 
         String robloxId = event.getOption("roblox_id").getAsString();
         String providedDiscordId = event.getOption("discord_id") != null ? event.getOption("discord_id").getAsString() : null;
-        String reason = event.getOption("reason") != null ? event.getOption("reason").getAsString() : "No reason provided";
 
-        if (blacklistEntryRepository.existsByRobloxIdAndIsActiveTrue(robloxId)) {
+        if (!blacklistEntryRepository.findAllByRobloxIdAndIsActiveTrue(robloxId).isEmpty()) {
             event.getHook().deleteOriginal().queue();
             event.getHook().sendMessage("This Roblox ID is already in the active blacklist database.").setEphemeral(true).queue();
             return;
         }
+
+        if (providedDiscordId != null && !blacklistEntryRepository.findAllByDiscordIdAndIsActiveTrue(providedDiscordId).isEmpty()) {
+            event.getHook().deleteOriginal().queue();
+            event.getHook().sendMessage("This Discord ID is already in the active blacklist database.").setEphemeral(true).queue();
+            return;
+        }
+
+        String reason = event.getOption("reason") != null ? event.getOption("reason").getAsString() : "No reason provided";
 
         Optional<pl.cramber.assetstore.entity.User> dbUserOpt = userRepository.findByRobloxId(robloxId);
 

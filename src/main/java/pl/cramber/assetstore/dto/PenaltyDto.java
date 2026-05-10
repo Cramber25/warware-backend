@@ -13,6 +13,8 @@ public class PenaltyDto {
     private String type;
     private String reason;
     private ZonedDateTime expiresAt;
+    private ZonedDateTime createdAt;
+    private boolean isActive;
     private boolean canAppeal;
     private AppealDto appeal;
 }
