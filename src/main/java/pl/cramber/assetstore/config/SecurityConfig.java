@@ -63,9 +63,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/sitemap.xml").permitAll()
                         .requestMatchers(HttpMethod.GET, "/asset/{id}").permitAll()
 
+                        .requestMatchers("/api/appeals/**").authenticated()
+
                         .requestMatchers("/api/admin/metadata/**").hasRole("SUPERADMIN")
+                        .requestMatchers("/api/admin/appeals/**").hasAnyRole("ADMIN", "SUPERADMIN", "MODERATOR")
                         .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "SUPERADMIN")
-                        .anyRequest().authenticated()
+
+                        .anyRequest().hasAnyRole("USER", "TRUSTED", "MODERATOR", "ADMIN", "SUPERADMIN")
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .userInfoEndpoint(userInfo -> userInfo

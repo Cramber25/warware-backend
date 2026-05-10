@@ -12,4 +12,5 @@ import java.util.UUID;
 public interface TempBanRepository extends JpaRepository<TempBan, UUID> {
     List<TempBan> findAllByUnbanAtBefore(ZonedDateTime time);
     void deleteByDiscordIdAndGuildId(String discordId, String guildId);
+    void deleteByDiscordId(String discordId);
 }

@@ -19,6 +19,12 @@ public class DiscordNotificationService {
     @Value("${DISCORD_CHANNEL_ID:}")
     private String channelId;
 
+    @Value("${DISCORD_APPEAL_CHANNEL_ID:}")
+    private String appealChannelId;
+
+    @Value("${DISCORD_GUILD_ID:}")
+    private String guildId;
+
     @Value("${FRONTEND_URL:http://localhost:5173}")
     private String frontendUrl;
 
@@ -26,12 +32,32 @@ public class DiscordNotificationService {
 
     public void sendDepositNotification(String robloxUsername, String discordId, Integer amount) {
         String content = String.format("**%s** (`%s`) deposited **%dR$**", robloxUsername, discordId, amount);
-        sendMessage(content);
+        sendMessage(channelId, content);
     }
 
     public void sendPurchaseNotification(String robloxUsername, String discordId, String assetName, String assetId) {
         String content = String.format("**%s** (`%s`) bought asset **%s** (`%s`)", robloxUsername, discordId, assetName, assetId);
-        sendMessage(content);
+        sendMessage(channelId, content);
+    }
+
+    public void sendAppealNotification(String robloxUsername, String discordId, String type, String appealContent) {
+        String safeContent = appealContent.replace("\"", "\\\"").replace("\n", "\\n");
+        String message = String.format("**New %s Appeal**\\n**User:** %s (`%s`)\\n**Content:**\\n%s", type, robloxUsername, discordId, safeContent);
+        sendMessage(appealChannelId, message);
+    }
+
+    public void revokeDiscordBan(String discordId) {
+        if (botToken == null || guildId == null || botToken.isBlank() || guildId.isBlank()) return;
+
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://discord.com/api/v10/guilds/" + guildId + "/bans/" + discordId))
+                    .header("Authorization", "Bot " + botToken)
+                    .DELETE()
+                    .build();
+
+            httpClient.sendAsync(request, HttpResponse.BodyHandlers.discarding());
+        } catch (Exception ignored) {}
     }
 
     public void sendOrderCompleteDM(String discordId, String assetName) {
@@ -70,8 +96,8 @@ public class DiscordNotificationService {
         } catch (Exception ignored) {}
     }
 
-    private void sendMessage(String content) {
-        if (botToken == null || channelId == null || botToken.isBlank() || channelId.isBlank()) {
+    private void sendMessage(String targetChannelId, String content) {
+        if (botToken == null || targetChannelId == null || botToken.isBlank() || targetChannelId.isBlank()) {
             return;
         }
 
@@ -79,7 +105,7 @@ public class DiscordNotificationService {
             String payload = "{\"content\": \"" + content.replace("\"", "\\\"") + "\"}";
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://discord.com/api/v10/channels/" + channelId + "/messages"))
+                    .uri(URI.create("https://discord.com/api/v10/channels/" + targetChannelId + "/messages"))
                     .header("Authorization", "Bot " + botToken)
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(payload))

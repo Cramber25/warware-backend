@@ -39,10 +39,6 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         Optional<User> existingUserOpt = userRepository.findByDiscordId(discordId);
 
-        if (existingUserOpt.isPresent() && existingUserOpt.get().isBanned()) {
-            throw new OAuth2AuthenticationException("BANNED_USER");
-        }
-
         User user = existingUserOpt
                 .map(existingUser -> {
                     existingUser.setDiscordUsername(username);
@@ -61,7 +57,12 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 });
 
         List<GrantedAuthority> authorities = new ArrayList<>(oAuth2User.getAuthorities());
-        authorities.add(new SimpleGrantedAuthority("ROLE_" + user.getRole()));
+
+        if (user.isBanned()) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_BANNED"));
+        } else {
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + user.getRole()));
+        }
 
         return new DefaultOAuth2User(
                 authorities,
