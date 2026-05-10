@@ -29,11 +29,6 @@ public class AppealService {
     private final DiscordNotificationService discordNotificationService;
 
     @Transactional(readOnly = true)
-    public Page<AppealDto> getUserAppeals(UUID userId, Pageable pageable) {
-        return appealRepository.findByUserId(userId, pageable).map(AppealDto::fromEntity);
-    }
-
-    @Transactional(readOnly = true)
     public Page<AppealDto> getAllAppeals(String status, Pageable pageable) {
         if (status != null && !status.isEmpty()) {
             return appealRepository.findByStatus(status, pageable).map(AppealDto::fromEntity);
@@ -47,8 +42,26 @@ public class AppealService {
             throw new RuntimeException("USER_NOT_BANNED");
         }
 
-        if (appealRepository.existsByUserIdAndStatus(user.getId(), "PENDING")) {
-            throw new RuntimeException("APPEAL_ALREADY_PENDING");
+        if (referenceId == null) {
+            throw new RuntimeException("REFERENCE_ID_REQUIRED");
+        }
+
+        if (appealRepository.existsByReferenceId(referenceId)) {
+            throw new RuntimeException("APPEAL_ALREADY_EXISTS_FOR_THIS_PENALTY");
+        }
+
+        if ("BLACKLIST".equals(type)) {
+            boolean exists = blacklistEntryRepository.findById(referenceId)
+                    .map(b -> b.getDiscordId().equals(user.getDiscordId()) && b.isActive())
+                    .orElse(false);
+            if (!exists) throw new RuntimeException("INVALID_BLACKLIST_REFERENCE");
+        } else if ("BAN".equals(type)) {
+            boolean exists = tempBanRepository.findById(referenceId)
+                    .map(b -> b.getDiscordId().equals(user.getDiscordId()))
+                    .orElse(false);
+            if (!exists) throw new RuntimeException("INVALID_BAN_REFERENCE");
+        } else {
+            throw new RuntimeException("INVALID_APPEAL_TYPE");
         }
 
         Appeal appeal = Appeal.builder()

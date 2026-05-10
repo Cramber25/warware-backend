@@ -2,10 +2,6 @@ package pl.cramber.assetstore.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -28,20 +24,6 @@ public class AppealController {
     private final AppealService appealService;
     private final UserRepository userRepository;
 
-    @GetMapping("/my")
-    @Transactional(readOnly = true)
-    public ResponseEntity<?> getMyAppeals(
-            @AuthenticationPrincipal OAuth2User principal,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-
-        User user = userRepository.findByDiscordId(principal.getAttribute("id")).orElseThrow();
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-
-        Page<AppealDto> appeals = appealService.getUserAppeals(user.getId(), pageable);
-        return ResponseEntity.ok(appeals);
-    }
-
     @PostMapping
     @Transactional
     public ResponseEntity<?> submitAppeal(
@@ -51,9 +33,10 @@ public class AppealController {
         User user = userRepository.findByDiscordId(principal.getAttribute("id")).orElseThrow();
         String type = payload.get("appealType");
         String content = payload.get("content");
-        UUID referenceId = payload.containsKey("referenceId") ? UUID.fromString(payload.get("referenceId")) : null;
+        UUID referenceId = payload.containsKey("referenceId") && payload.get("referenceId") != null
+                ? UUID.fromString(payload.get("referenceId")) : null;
 
-        if (content == null || content.trim().isEmpty() || type == null) {
+        if (content == null || content.trim().isEmpty() || type == null || referenceId == null) {
             return ResponseEntity.badRequest().body(Map.of("error", "Missing required fields"));
         }
 
