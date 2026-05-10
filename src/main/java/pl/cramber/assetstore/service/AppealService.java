@@ -43,10 +43,6 @@ public class AppealService {
 
     @Transactional
     public AppealDto submitAppeal(User user, String type, UUID referenceId, String content) {
-        if (!user.isBanned()) {
-            throw new RuntimeException("USER_NOT_BANNED");
-        }
-
         if (referenceId == null) {
             throw new RuntimeException("REFERENCE_ID_REQUIRED");
         }

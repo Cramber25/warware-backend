@@ -11,18 +11,16 @@ import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import pl.cramber.assetstore.entity.User;
-import pl.cramber.assetstore.repository.UserRepository;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "discord.bot.enabled", havingValue = "false", matchIfMissing = true)
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
-    private final UserRepository userRepository;
+    private final UserSyncService userSyncService;
     private final R2Service r2Service;
 
     @Override
@@ -40,24 +38,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         String finalAvatarUrl = r2Service.uploadAvatarFromUrl(sourceAvatarUrl, "discord", discordId);
 
-        Optional<User> existingUserOpt = userRepository.findByDiscordId(discordId);
-
-        User user = existingUserOpt
-                .map(existingUser -> {
-                    existingUser.setDiscordUsername(username);
-                    existingUser.setDiscordAvatarUrl(finalAvatarUrl);
-                    existingUser.setEmail(email);
-                    return userRepository.save(existingUser);
-                })
-                .orElseGet(() -> {
-                    User newUser = User.builder()
-                            .discordId(discordId)
-                            .discordUsername(username)
-                            .discordAvatarUrl(finalAvatarUrl)
-                            .email(email)
-                            .build();
-                    return userRepository.save(newUser);
-                });
+        User user = userSyncService.syncUserWithPenalties(discordId, username, finalAvatarUrl, email);
 
         List<GrantedAuthority> authorities = new ArrayList<>(oAuth2User.getAuthorities());
 
