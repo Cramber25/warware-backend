@@ -1,0 +1,1 @@
+ALTER TABLE temp_bans ALTER COLUMN unban_at DROP NOT NULL;
