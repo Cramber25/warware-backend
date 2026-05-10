@@ -14,6 +14,7 @@ import org.springframework.web.client.RestTemplate;
 import pl.cramber.assetstore.entity.User;
 import pl.cramber.assetstore.repository.BlacklistEntryRepository;
 import pl.cramber.assetstore.repository.UserRepository;
+import pl.cramber.assetstore.service.R2Service;
 
 import java.net.URI;
 import java.util.Map;
@@ -28,6 +29,7 @@ public class RobloxLinkController {
     private final UserRepository userRepository;
     private final StringRedisTemplate redisTemplate;
     private final BlacklistEntryRepository blacklistEntryRepository;
+    private final R2Service r2Service;
 
     @Value("${ROBLOX_CLIENT_ID:}")
     private String clientId;
@@ -130,9 +132,11 @@ public class RobloxLinkController {
                 }
             }
 
+            String finalRobloxAvatarUrl = r2Service.uploadAvatarFromUrl(robloxAvatarUrl, "roblox", robloxId);
+
             user.setRobloxId(robloxId);
             user.setRobloxUsername(robloxUsername);
-            user.setRobloxAvatarUrl(robloxAvatarUrl);
+            user.setRobloxAvatarUrl(finalRobloxAvatarUrl);
             userRepository.save(user);
 
             redisTemplate.convertAndSend("verification-channel", discordId + "::" + robloxUsername);

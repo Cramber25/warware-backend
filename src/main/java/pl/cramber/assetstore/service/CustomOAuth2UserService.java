@@ -23,6 +23,7 @@ import java.util.Optional;
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     private final UserRepository userRepository;
+    private final R2Service r2Service;
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
@@ -33,16 +34,18 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         String avatarHash = oAuth2User.getAttribute("avatar");
         String email = oAuth2User.getAttribute("email");
 
-        String avatarUrl = avatarHash != null
-                ? "https://cdn.discordapp.com/avatars/" + discordId + "/" + avatarHash + ".png"
+        String sourceAvatarUrl = avatarHash != null
+                ? "https://cdn.discordapp.com/avatars/" + discordId + "/" + avatarHash + ".webp?size=128"
                 : "https://cdn.discordapp.com/embed/avatars/0.png";
+
+        String finalAvatarUrl = r2Service.uploadAvatarFromUrl(sourceAvatarUrl, "discord", discordId);
 
         Optional<User> existingUserOpt = userRepository.findByDiscordId(discordId);
 
         User user = existingUserOpt
                 .map(existingUser -> {
                     existingUser.setDiscordUsername(username);
-                    existingUser.setDiscordAvatarUrl(avatarUrl);
+                    existingUser.setDiscordAvatarUrl(finalAvatarUrl);
                     existingUser.setEmail(email);
                     return userRepository.save(existingUser);
                 })
@@ -50,7 +53,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                     User newUser = User.builder()
                             .discordId(discordId)
                             .discordUsername(username)
-                            .discordAvatarUrl(avatarUrl)
+                            .discordAvatarUrl(finalAvatarUrl)
                             .email(email)
                             .build();
                     return userRepository.save(newUser);

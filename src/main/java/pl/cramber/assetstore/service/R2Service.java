@@ -13,6 +13,10 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
@@ -65,6 +69,39 @@ public class R2Service {
                 .build();
 
         s3Client.deleteObject(deleteObjectRequest);
+    }
+
+    public String uploadAvatarFromUrl(String sourceUrl, String platform, String userId) {
+        try {
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(sourceUrl))
+                    .GET()
+                    .build();
+
+            HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
+            if (response.statusCode() != 200) {
+                return sourceUrl;
+            }
+
+            String extension = "webp";
+            if (sourceUrl.contains(".png")) extension = "png";
+            else if (sourceUrl.contains(".jpg") || sourceUrl.contains(".jpeg")) extension = "jpeg";
+
+            String fileKey = "avatars/" + platform + "/" + userId + "." + extension;
+
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(publicBucketName)
+                    .key(fileKey)
+                    .contentType("image/" + extension)
+                    .build();
+
+            s3Client.putObject(putObjectRequest, RequestBody.fromBytes(response.body()));
+
+            return publicUrl + "/" + fileKey;
+        } catch (Exception e) {
+            return sourceUrl;
+        }
     }
 
     public ImageUploadTicket generateImageUploadUrl(String originalFilename, String type, UUID assetId, String folder) {
