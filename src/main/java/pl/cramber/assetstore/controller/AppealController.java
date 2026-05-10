@@ -25,7 +25,6 @@ public class AppealController {
     private final UserRepository userRepository;
 
     @PostMapping
-    @Transactional
     public ResponseEntity<?> submitAppeal(
             @AuthenticationPrincipal OAuth2User principal,
             @RequestBody Map<String, String> payload) {
