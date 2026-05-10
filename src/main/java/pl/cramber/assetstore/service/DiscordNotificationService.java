@@ -1,5 +1,6 @@
 package pl.cramber.assetstore.service;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
@@ -8,19 +9,20 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 @ConditionalOnProperty(name = "discord.bot.enabled", havingValue = "false", matchIfMissing = true)
 public class DiscordNotificationService {
+
+    private final StoreSettingService storeSettingService;
 
     @Value("${DISCORD_TOKEN:}")
     private String botToken;
 
     @Value("${DISCORD_CHANNEL_ID:}")
     private String channelId;
-
-    @Value("${DISCORD_APPEAL_CHANNEL_ID:}")
-    private String appealChannelId;
 
     @Value("${DISCORD_GUILD_ID:}")
     private String guildId;
@@ -41,23 +43,58 @@ public class DiscordNotificationService {
     }
 
     public void sendAppealNotification(String robloxUsername, String discordId, String type, String appealContent) {
-        String safeContent = appealContent.replace("\"", "\\\"").replace("\n", "\\n");
-        String message = String.format("**New %s Appeal**\\n**User:** %s (`%s`)\\n**Content:**\\n%s", type, robloxUsername, discordId, safeContent);
-        sendMessage(appealChannelId, message);
+        Map<String, String> settings = storeSettingService.getAllSettings();
+        String appealChannelId = settings.get("DISCORD_APPEAL_CHANNEL_ID");
+
+        if (botToken == null || appealChannelId == null || botToken.isBlank() || appealChannelId.isBlank()) return;
+
+        try {
+            String safeContent = appealContent
+                    .replace("\\", "\\\\")
+                    .replace("\"", "\\\"")
+                    .replace("\r", "")
+                    .replace("\n", "\\n");
+
+            String message = String.format("**New %s Appeal**\\n**User:** %s (`%s`)\\n**Content:**\\n%s",
+                    type, robloxUsername, discordId, safeContent);
+
+            String payload = "{\"content\": \"" + message + "\"}";
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://discord.com/api/v10/channels/" + appealChannelId + "/messages"))
+                    .header("Authorization", "Bot " + botToken)
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(payload))
+                    .build();
+
+            httpClient.sendAsync(request, HttpResponse.BodyHandlers.discarding());
+        } catch (Exception ignored) {
+        }
     }
 
     public void revokeDiscordBan(String discordId) {
-        if (botToken == null || guildId == null || botToken.isBlank() || guildId.isBlank()) return;
+        if (botToken == null || guildId == null || botToken.isBlank() || guildId.isBlank()) {
+            System.err.println("Discord token or guild ID is missing, cannot revoke ban.");
+            return;
+        }
 
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://discord.com/api/v10/guilds/" + guildId + "/bans/" + discordId))
                     .header("Authorization", "Bot " + botToken)
+                    .header("X-Audit-Log-Reason", "Appeal Accepted")
                     .DELETE()
                     .build();
 
-            httpClient.sendAsync(request, HttpResponse.BodyHandlers.discarding());
-        } catch (Exception ignored) {}
+            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenAccept(response -> {
+                        if (response.statusCode() != 204) {
+                            System.err.println("Failed to revoke ban for user " + discordId + ". Discord returned status: " + response.statusCode());
+                        }
+                    });
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public void sendOrderCompleteDM(String discordId, String assetName) {
