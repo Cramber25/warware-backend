@@ -55,10 +55,18 @@ public class DiscordNotificationService {
                     .replace("\r", "")
                     .replace("\n", "\\n");
 
-            String message = String.format("**New %s Appeal**\\n**User:** %s (`%s`)\\n**Content:**\\n%s",
-                    type, robloxUsername, discordId, safeContent);
+            int embedColor = "BAN".equalsIgnoreCase(type) ? 16711680 : 16753920;
 
-            String payload = "{\"content\": \"" + message + "\"}";
+            String payload = "{"
+                    + "\"embeds\": [{"
+                    + "\"title\": \"New " + type + " Appeal\","
+                    + "\"color\": " + embedColor + ","
+                    + "\"fields\": ["
+                    + "{\"name\": \"User\", \"value\": \"" + robloxUsername + " (`" + discordId + "`)\", \"inline\": false},"
+                    + "{\"name\": \"Content\", \"value\": \"" + safeContent + "\", \"inline\": false}"
+                    + "]"
+                    + "}]"
+                    + "}";
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://discord.com/api/v10/channels/" + appealChannelId + "/messages"))
