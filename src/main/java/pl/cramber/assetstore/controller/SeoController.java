@@ -146,6 +146,9 @@ public class SeoController {
         seoTags.append(jsonLdScript).append("\n");
 
         String cleanedHtml = html.replaceAll("<title>.*?</title>", "");
+
+        cleanedHtml = cleanedHtml.replaceAll("<meta[^>]+(?:name|property)=[\"'](?:title|description|og:[^\"']+|twitter:[^\"']+)[\"'][^>]*>", "");
+
         return cleanedHtml.replaceFirst("</head>", Matcher.quoteReplacement(seoTags.toString() + "</head>"));
     }
 }
