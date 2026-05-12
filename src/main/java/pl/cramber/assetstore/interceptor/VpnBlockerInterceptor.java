@@ -18,15 +18,19 @@ public class VpnBlockerInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String ipAddress = request.getHeader("CF-Connecting-IP");
+
         if (ipAddress == null || ipAddress.isEmpty()) {
             ipAddress = request.getRemoteAddr();
+        }
+
+        if (ipAddress != null && ipAddress.contains(",")) {
+            ipAddress = ipAddress.split(",")[0].trim();
         }
 
         if (vpnDetectionService.isVpnOrProxy(ipAddress)) {
             response.setStatus(HttpStatus.FORBIDDEN.value());
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             response.getWriter().write("{\"error\": \"Accessing our service via a VPN/Proxy is not allowed.\"}");
-
             return false;
         }
 
