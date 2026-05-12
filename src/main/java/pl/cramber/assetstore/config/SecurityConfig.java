@@ -30,6 +30,7 @@ public class SecurityConfig {
 
     private final CustomOAuth2UserService customOAuth2UserService;
     private final CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler;
+    private final VpnBlockerFilter vpnBlockerFilter;
 
     @Value("${FRONTEND_URL:http://localhost:5173}")
     private String frontendUrl;
@@ -47,6 +48,7 @@ public class SecurityConfig {
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
                 )
                 .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
+                .addFilterBefore(vpnBlockerFilter, org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter.class)
                 .exceptionHandling(customizer -> customizer
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
                 )
