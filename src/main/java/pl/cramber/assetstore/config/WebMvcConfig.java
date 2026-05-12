@@ -18,10 +18,16 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(rateLimitInterceptor).addPathPatterns("/api/**");
+        registry.addInterceptor(rateLimitInterceptor).addPathPatterns(
+                "/api/**",
+                "/oauth2/**",
+                "/login/**"
+        );
+
         registry.addInterceptor(vpnBlockerInterceptor).addPathPatterns(
-            "/api/auth/login",
-            "/api/auth/verify"
+                "/api/auth/roblox/**",
+                "/oauth2/**",
+                "/login/**"
         );
     }
 }
