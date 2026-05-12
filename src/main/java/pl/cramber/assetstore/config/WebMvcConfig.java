@@ -6,7 +6,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import pl.cramber.assetstore.interceptor.RateLimitInterceptor;
-import pl.cramber.assetstore.interceptor.VpnBlockerInterceptor;
 
 @Configuration
 @ConditionalOnProperty(name = "discord.bot.enabled", havingValue = "false", matchIfMissing = true)
@@ -14,18 +13,11 @@ import pl.cramber.assetstore.interceptor.VpnBlockerInterceptor;
 public class WebMvcConfig implements WebMvcConfigurer {
 
     private final RateLimitInterceptor rateLimitInterceptor;
-    private final VpnBlockerInterceptor vpnBlockerInterceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(rateLimitInterceptor).addPathPatterns(
                 "/api/**",
-                "/oauth2/**",
-                "/login/**"
-        );
-
-        registry.addInterceptor(vpnBlockerInterceptor).addPathPatterns(
-                "/api/auth/roblox/**",
                 "/oauth2/**",
                 "/login/**"
         );
