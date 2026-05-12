@@ -5,9 +5,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import pl.cramber.assetstore.service.VpnDetectionService;
@@ -20,6 +19,9 @@ import java.io.IOException;
 public class VpnBlockerFilter extends OncePerRequestFilter {
 
     private final VpnDetectionService vpnDetectionService;
+
+    @Value("${FRONTEND_URL:http://localhost:5173}")
+    private String frontendUrl;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -38,9 +40,7 @@ public class VpnBlockerFilter extends OncePerRequestFilter {
             }
 
             if (vpnDetectionService.isVpnOrProxy(ipAddress)) {
-                response.setStatus(HttpStatus.FORBIDDEN.value());
-                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-                response.getWriter().write("{\"error\": \"Accessing our service via a VPN/Proxy is not allowed.\"}");
+                response.sendRedirect(frontendUrl + "?error=vpn_proxy_not_allowed");
                 return;
             }
         }
