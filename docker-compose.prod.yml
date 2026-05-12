@@ -82,6 +82,7 @@ services:
       BACKEND_URL: ${BACKEND_URL}
       ROBLOX_CLIENT_ID: ${ROBLOX_CLIENT_ID}
       ROBLOX_CLIENT_SECRET: ${ROBLOX_CLIENT_SECRET}
+      VPNAPI_KEY: ${VPNAPI_KEY}
     restart: unless-stopped
 
   bot:

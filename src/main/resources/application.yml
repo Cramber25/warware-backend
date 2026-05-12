@@ -77,3 +77,5 @@ discord:
     guild-id: ${DISCORD_GUILD_ID:}
     verified-role-id: ${DISCORD_VERIFIED_ROLE_ID:}
     unverified-role-id: ${DISCORD_UNVERIFIED_ROLE_ID:}
+vpnapi:
+  key: ${VPNAPI_KEY}

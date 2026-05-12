@@ -1,4 +1,4 @@
-package pl.cramber.assetstore.config;
+package pl.cramber.assetstore.interceptor;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
