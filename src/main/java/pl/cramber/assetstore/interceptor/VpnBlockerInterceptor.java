@@ -3,6 +3,7 @@ package pl.cramber.assetstore.interceptor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -11,6 +12,7 @@ import pl.cramber.assetstore.service.VpnDetectionService;
 
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "discord.bot.enabled", havingValue = "false", matchIfMissing = true)
 public class VpnBlockerInterceptor implements HandlerInterceptor {
 
     private final VpnDetectionService vpnDetectionService;

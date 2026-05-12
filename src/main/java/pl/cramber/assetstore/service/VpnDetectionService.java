@@ -3,6 +3,7 @@ package pl.cramber.assetstore.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import pl.cramber.assetstore.dto.VpnApiResponse;
@@ -15,6 +16,7 @@ import java.util.Optional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "discord.bot.enabled", havingValue = "false", matchIfMissing = true)
 public class VpnDetectionService {
 
     private final RestTemplate restTemplate = new RestTemplate();

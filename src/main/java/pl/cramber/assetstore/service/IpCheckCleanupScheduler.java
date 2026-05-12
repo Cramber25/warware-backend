@@ -1,6 +1,7 @@
 package pl.cramber.assetstore.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -14,6 +15,7 @@ import java.time.LocalDateTime;
 @Configuration
 @EnableScheduling
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "discord.bot.enabled", havingValue = "false", matchIfMissing = true)
 public class IpCheckCleanupScheduler {
 
     private final IpCheckRepository ipCheckRepository;
