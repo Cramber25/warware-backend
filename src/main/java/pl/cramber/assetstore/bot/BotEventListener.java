@@ -21,6 +21,8 @@ import pl.cramber.assetstore.repository.UserRepository;
 import pl.cramber.assetstore.service.StoreSettingService;
 
 import java.awt.Color;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Optional;
 
@@ -139,6 +141,10 @@ public class BotEventListener extends ListenerAdapter {
 
     private void sendMessage(TextChannel channel, String json, Member member, User user, Guild guild) {
         try {
+            try {
+                json = URLDecoder.decode(json, StandardCharsets.UTF_8.name());
+            } catch (Exception ignored) {}
+
             if (json.trim().startsWith("{")) {
                 DiscordMessageData data = objectMapper.readValue(json, DiscordMessageData.class);
                 MessageCreateBuilder builder = new MessageCreateBuilder();
