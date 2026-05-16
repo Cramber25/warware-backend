@@ -1,6 +1,7 @@
 package pl.cramber.assetstore.bot;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -21,8 +22,6 @@ import pl.cramber.assetstore.repository.UserRepository;
 import pl.cramber.assetstore.service.StoreSettingService;
 
 import java.awt.Color;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Optional;
 
@@ -34,7 +33,8 @@ public class BotEventListener extends ListenerAdapter {
 
     private final UserRepository userRepository;
     private final StoreSettingService storeSettingService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .enable(JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS);
 
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -141,12 +141,10 @@ public class BotEventListener extends ListenerAdapter {
 
     private void sendMessage(TextChannel channel, String json, Member member, User user, Guild guild) {
         try {
-            try {
-                json = URLDecoder.decode(json, StandardCharsets.UTF_8.name());
-            } catch (Exception ignored) {}
+            String parsedJson = json.replace("\r", "").replace("\n", "\\n");
 
-            if (json.trim().startsWith("{")) {
-                DiscordMessageData data = objectMapper.readValue(json, DiscordMessageData.class);
+            if (parsedJson.trim().startsWith("{")) {
+                DiscordMessageData data = objectMapper.readValue(parsedJson, DiscordMessageData.class);
                 MessageCreateBuilder builder = new MessageCreateBuilder();
 
                 if (data.getContent() != null && !data.getContent().isEmpty()) {
@@ -196,7 +194,7 @@ public class BotEventListener extends ListenerAdapter {
                 .replace("{user}", member != null ? member.getAsMention() : user.getAsMention())
                 .replace("{user_name}", user.getName() != null ? user.getName() : "Unknown")
                 .replace("{user_id}", user.getId())
-                .replace("{user_avatar}", user.getEffectiveAvatarUrl())
+                .replace("{user_avatar}", user.getEffectiveAvatarUrl() != null ? user.getEffectiveAvatarUrl() : "")
                 .replace("{server_name}", guild.getName() != null ? guild.getName() : "Unknown Server")
                 .replace("{member_count}", String.valueOf(guild.getMemberCount()));
     }
