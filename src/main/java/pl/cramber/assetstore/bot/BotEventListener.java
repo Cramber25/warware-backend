@@ -34,7 +34,8 @@ public class BotEventListener extends ListenerAdapter {
     private final UserRepository userRepository;
     private final StoreSettingService storeSettingService;
     private final ObjectMapper objectMapper = new ObjectMapper()
-            .enable(JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS);
+            .enable(JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS)
+            .enable(JsonParser.Feature.ALLOW_SINGLE_QUOTES);
 
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -141,13 +142,13 @@ public class BotEventListener extends ListenerAdapter {
 
     private void sendMessage(TextChannel channel, String json, Member member, User user, Guild guild) {
         try {
-            String parsedJson = json.replace("\r", "").replace("\n", "\\n");
+            String cleanJson = json.replace("\r", "").replace("\n", "\\n");
 
-            if (parsedJson.trim().startsWith("{")) {
-                DiscordMessageData data = objectMapper.readValue(parsedJson, DiscordMessageData.class);
+            if (cleanJson.trim().startsWith("{")) {
+                DiscordMessageData data = objectMapper.readValue(cleanJson, DiscordMessageData.class);
                 MessageCreateBuilder builder = new MessageCreateBuilder();
 
-                if (data.getContent() != null && !data.getContent().isEmpty()) {
+                if (data.getContent() != null && !data.getContent().isBlank()) {
                     builder.setContent(replacePlaceholders(data.getContent(), member, user, guild));
                 }
 
@@ -155,34 +156,64 @@ public class BotEventListener extends ListenerAdapter {
                     EmbedBuilder embedBuilder = new EmbedBuilder();
                     DiscordMessageData.EmbedData embedData = data.getEmbed();
 
-                    if (embedData.getTitle() != null) embedBuilder.setTitle(replacePlaceholders(embedData.getTitle(), member, user, guild));
-                    if (embedData.getDescription() != null) embedBuilder.setDescription(replacePlaceholders(embedData.getDescription(), member, user, guild));
+                    if (embedData.getTitle() != null && !embedData.getTitle().isBlank()) {
+                        embedBuilder.setTitle(replacePlaceholders(embedData.getTitle(), member, user, guild));
+                    }
 
-                    if (embedData.getColor() != null && !embedData.getColor().isEmpty()) {
+                    if (embedData.getDescription() != null && !embedData.getDescription().isBlank()) {
+                        embedBuilder.setDescription(replacePlaceholders(embedData.getDescription(), member, user, guild));
+                    }
+
+                    if (embedData.getColor() != null && !embedData.getColor().isBlank()) {
                         try {
                             embedBuilder.setColor(Color.decode(embedData.getColor().startsWith("#") ? embedData.getColor() : "#" + embedData.getColor()));
                         } catch (Exception ignored) {}
                     }
 
-                    if (embedData.getThumbnail() != null && !embedData.getThumbnail().isEmpty()) embedBuilder.setThumbnail(replacePlaceholders(embedData.getThumbnail(), member, user, guild));
-                    if (embedData.getImage() != null && !embedData.getImage().isEmpty()) embedBuilder.setImage(replacePlaceholders(embedData.getImage(), member, user, guild));
-
-                    if (embedData.getFooter() != null) {
-                        String footerText = embedData.getFooter().getText() != null ? replacePlaceholders(embedData.getFooter().getText(), member, user, guild) : null;
-                        String footerIcon = embedData.getFooter().getIconUrl() != null ? replacePlaceholders(embedData.getFooter().getIconUrl(), member, user, guild) : null;
-                        if (footerText != null) embedBuilder.setFooter(footerText, footerIcon);
+                    if (embedData.getThumbnail() != null) {
+                        String thumb = replacePlaceholders(embedData.getThumbnail(), member, user, guild);
+                        if (!thumb.isBlank()) {
+                            embedBuilder.setThumbnail(thumb);
+                        }
                     }
 
-                    if (!embedBuilder.isEmpty()) builder.setEmbeds(embedBuilder.build());
+                    if (embedData.getImage() != null) {
+                        String img = replacePlaceholders(embedData.getImage(), member, user, guild);
+                        if (!img.isBlank()) {
+                            embedBuilder.setImage(img);
+                        }
+                    }
+
+                    if (embedData.getFooter() != null) {
+                        String fText = embedData.getFooter().getText() != null ? replacePlaceholders(embedData.getFooter().getText(), member, user, guild) : null;
+                        String fIcon = embedData.getFooter().getIconUrl() != null ? replacePlaceholders(embedData.getFooter().getIconUrl(), member, user, guild) : null;
+
+                        if (fIcon != null && fIcon.isBlank()) {
+                            fIcon = null;
+                        }
+
+                        if (fText != null && !fText.isBlank()) {
+                            embedBuilder.setFooter(fText, fIcon);
+                        } else if (fText == null && fIcon != null) {
+                            embedBuilder.setFooter("\u200B", fIcon);
+                        }
+                    }
+
+                    if (!embedBuilder.isEmpty()) {
+                        builder.setEmbeds(embedBuilder.build());
+                    }
                 }
 
-                if (!builder.isEmpty()) channel.sendMessage(builder.build()).queue(null, e -> log.error("Failed to send JSON message"));
+                if (!builder.isEmpty()) {
+                    channel.sendMessage(builder.build()).queue(null, e -> log.error("Failed to send JSON message", e));
+                }
             } else {
-                channel.sendMessage(replacePlaceholders(json, member, user, guild)).queue(null, e -> log.error("Failed to send raw message"));
+                channel.sendMessage(replacePlaceholders(json, member, user, guild)).queue(null, e -> log.error("Failed to send raw message", e));
             }
         } catch (Exception e) {
+            log.error("Failed to parse or send embed, falling back to raw text", e);
             String fallback = replacePlaceholders(json, member, user, guild);
-            if (fallback != null && !fallback.isEmpty()) {
+            if (fallback != null && !fallback.isBlank()) {
                 channel.sendMessage(fallback).queue(null, err -> log.error("Failed to send fallback message"));
             }
         }
