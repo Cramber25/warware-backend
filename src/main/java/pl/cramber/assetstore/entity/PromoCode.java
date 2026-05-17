@@ -47,6 +47,10 @@ public class PromoCode {
     @Column(name = "usage_limit")
     private Integer usageLimit;
 
+    @Column(name = "current_usage", nullable = false)
+    @Builder.Default
+    private Integer currentUsage = 0;
+
     @Column(name = "is_per_user", nullable = false)
     private boolean isPerUser;
 

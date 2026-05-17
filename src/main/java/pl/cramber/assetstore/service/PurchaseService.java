@@ -73,7 +73,7 @@ public class PurchaseService {
         PromoCode usedCode = null;
 
         if (promoCodeName != null && !promoCodeName.isEmpty()) {
-            PromoCode code = promoCodeRepository.findByCodeAndIsActiveTrue(promoCodeName)
+            PromoCode code = promoCodeRepository.findByCodeForUpdate(promoCodeName)
                     .orElseThrow(() -> new RuntimeException("INVALID_PROMO_CODE"));
 
             if (code.getCreator() != null && !code.getCreator().getId().equals(asset.getCreator().getId())) {
@@ -92,7 +92,7 @@ public class PurchaseService {
             if (code.isPerUser() && promoCodeUsageRepository.existsByUserIdAndPromoCodeId(userId, code.getId())) {
                 throw new RuntimeException("PROMO_CODE_ALREADY_USED");
             }
-            if (code.getUsageLimit() != null && promoCodeUsageRepository.countByPromoCodeId(code.getId()) >= code.getUsageLimit()) {
+            if (code.getUsageLimit() != null && code.getCurrentUsage() >= code.getUsageLimit()) {
                 throw new RuntimeException("PROMO_CODE_EXHAUSTED");
             }
 
@@ -103,6 +103,9 @@ public class PurchaseService {
             }
 
             if (finalPrice < 0) finalPrice = 0;
+
+            code.setCurrentUsage(code.getCurrentUsage() + 1);
+            promoCodeRepository.save(code);
             usedCode = code;
         }
 
@@ -170,7 +173,7 @@ public class PurchaseService {
         PromoCode usedCode = null;
 
         if (promoCodeName != null && !promoCodeName.isEmpty()) {
-            PromoCode code = promoCodeRepository.findByCodeAndIsActiveTrue(promoCodeName).orElseThrow(() -> new RuntimeException("INVALID_PROMO_CODE"));
+            PromoCode code = promoCodeRepository.findByCodeForUpdate(promoCodeName).orElseThrow(() -> new RuntimeException("INVALID_PROMO_CODE"));
 
             if (code.getCreator() != null && !code.getCreator().getId().equals(asset.getCreator().getId())) {
                 throw new RuntimeException("CODE_NOT_VALID_FOR_THIS_CREATOR");
@@ -187,7 +190,7 @@ public class PurchaseService {
             if (code.isPerUser() && promoCodeUsageRepository.existsByUserIdAndPromoCodeId(userId, code.getId())) {
                 throw new RuntimeException("PROMO_CODE_ALREADY_USED");
             }
-            if (code.getUsageLimit() != null && promoCodeUsageRepository.countByPromoCodeId(code.getId()) >= code.getUsageLimit()) {
+            if (code.getUsageLimit() != null && code.getCurrentUsage() >= code.getUsageLimit()) {
                 throw new RuntimeException("PROMO_CODE_EXHAUSTED");
             }
 
@@ -195,6 +198,9 @@ public class PurchaseService {
                 finalPriceUsd = finalPriceUsd * (100 - code.getDiscountPercent()) / 100.0;
             }
             if (finalPriceUsd < 0) finalPriceUsd = 0.0;
+
+            code.setCurrentUsage(code.getCurrentUsage() + 1);
+            promoCodeRepository.save(code);
             usedCode = code;
         }
 
@@ -296,6 +302,46 @@ public class PurchaseService {
         }
 
         return statusResult;
+    }
+
+    @Transactional
+    public void captureOrderFromWebhook(String paypalOrderId) {
+        Optional<Order> orderOpt = orderRepository.findByPaypalOrderId(paypalOrderId);
+        if (orderOpt.isEmpty()) return;
+
+        Order order = orderOpt.get();
+        if (!"PENDING_PAYPAL".equals(order.getStatus())) return;
+
+        Map<String, String> captureData = payPalService.captureOrder(order.getAsset().getPaypalEnvKey(), paypalOrderId);
+        if (!"COMPLETED".equals(captureData.get("status"))) return;
+
+        order.setPaypalCaptureId(captureData.get("captureId"));
+
+        if (order.getPromoCode() != null) {
+            promoCodeUsageRepository.save(PromoCodeUsage.builder().user(order.getUser()).promoCode(order.getPromoCode()).build());
+        }
+
+        Transaction transaction = Transaction.builder().user(order.getUser()).amount(0).amountUsd(-order.getPurchasePriceUsd()).currency("USD").type("PURCHASE").build();
+        transactionRepository.save(transaction);
+
+        boolean isTrusted = "TRUSTED".equals(order.getUser().getRole()) || "SUPERADMIN".equals(order.getUser().getRole());
+
+        if ("INSTANT".equals(order.getAsset().getDeliveryType()) || isTrusted || order.getPurchasePriceUsd() == 0.0) {
+            order.setStatus("COMPLETED");
+            discordNotificationService.sendOrderCompleteDM(order.getUser().getDiscordId(), order.getAsset().getTitle());
+        } else {
+            order.setStatus("PENDING");
+            ticketRepository.save(Ticket.builder().order(order).status("OPEN").build());
+        }
+        orderRepository.save(order);
+
+        String username = order.getUser().getRobloxUsername() != null ? order.getUser().getRobloxUsername() : order.getUser().getDiscordUsername();
+        String priceStr = "$" + String.format(Locale.US, "%.2f", order.getPurchasePriceUsd());
+        discordNotificationService.sendPurchaseNotification(username, order.getUser().getDiscordId(), order.getAsset().getTitle(), order.getAsset().getId().toString(), "PAYPAL", priceStr);
+
+        if (!order.getAsset().getId().equals(BONUS_ASSET_ID)) {
+            try { grantAccess(order.getUser().getId(), BONUS_ASSET_ID); } catch (Exception ignored) {}
+        }
     }
 
     @Transactional

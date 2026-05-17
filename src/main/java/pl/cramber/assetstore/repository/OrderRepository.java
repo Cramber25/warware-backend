@@ -36,4 +36,6 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     Optional<Order> findByUserIdAndAssetIdAndStatusNot(UUID userId, UUID assetId, String status);
 
     boolean existsByUserIdAndAssetIdAndStatus(UUID userId, UUID assetId, String status);
+
+    Optional<Order> findByPaypalOrderId(String paypalOrderId);
 }
