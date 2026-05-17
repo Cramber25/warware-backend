@@ -1,0 +1,1 @@
+ALTER TABLE orders ADD COLUMN paypal_capture_id VARCHAR(255);
