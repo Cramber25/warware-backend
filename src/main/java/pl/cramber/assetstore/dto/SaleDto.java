@@ -10,5 +10,7 @@ public record SaleDto(
         String buyer,
         String assetTitle,
         Integer price,
+        Double priceUsd,
+        String paymentMethod,
         String promoCode
 ) {}

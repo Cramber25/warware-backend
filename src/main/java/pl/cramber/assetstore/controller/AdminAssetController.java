@@ -110,6 +110,9 @@ public class AdminAssetController {
                 .title(request.getTitle())
                 .description(request.getDescription())
                 .price(request.getPrice())
+                .paypalEnabled(request.getPaypalEnabled() != null ? request.getPaypalEnabled() : false)
+                .priceUsd(request.getPriceUsd())
+                .paypalEnvKey(request.getPaypalEnvKey())
                 .visibility(request.getVisibility())
                 .deliveryType(request.getDeliveryType())
                 .r2FileKey(request.getR2FileKey())
@@ -143,6 +146,9 @@ public class AdminAssetController {
         asset.setTitle(request.getTitle());
         asset.setDescription(request.getDescription());
         asset.setPrice(request.getPrice());
+        asset.setPaypalEnabled(request.getPaypalEnabled() != null ? request.getPaypalEnabled() : false);
+        asset.setPriceUsd(request.getPriceUsd());
+        asset.setPaypalEnvKey(request.getPaypalEnvKey());
         asset.setVisibility(request.getVisibility());
         asset.setDeliveryType(request.getDeliveryType());
         asset.setThumbnailUrl(request.getThumbnailUrl());

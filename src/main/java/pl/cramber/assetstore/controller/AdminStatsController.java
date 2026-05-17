@@ -60,6 +60,8 @@ public class AdminStatsController {
                 o.getUser().getDiscordUsername() != null ? o.getUser().getDiscordUsername() : o.getUser().getDiscordId(),
                 o.getAsset().getTitle(),
                 o.getPurchasePrice(),
+                o.getPurchasePriceUsd(),
+                o.getPaymentMethod(),
                 o.getPromoCode() != null ? o.getPromoCode().getCode() : null
         ));
 

@@ -39,6 +39,16 @@ public class Asset {
     @Column(nullable = false)
     private Integer price;
 
+    @Column(name = "paypal_enabled", nullable = false)
+    @Builder.Default
+    private Boolean paypalEnabled = false;
+
+    @Column(name = "price_usd")
+    private Double priceUsd;
+
+    @Column(name = "paypal_env_key")
+    private String paypalEnvKey;
+
     @Column(nullable = false)
     @Builder.Default
     private String visibility = "PRIVATE";

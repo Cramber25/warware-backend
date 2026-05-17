@@ -37,8 +37,8 @@ public class DiscordNotificationService {
         sendMessage(channelId, content);
     }
 
-    public void sendPurchaseNotification(String robloxUsername, String discordId, String assetName, String assetId) {
-        String content = String.format("**%s** (`%s`) bought asset **%s** (`%s`)", robloxUsername, discordId, assetName, assetId);
+    public void sendPurchaseNotification(String robloxUsername, String discordId, String assetName, String assetId, String paymentMethod, String price) {
+        String content = String.format("**%s** (`%s`) bought asset **%s** (`%s`) for **%s** via **%s**", robloxUsername, discordId, assetName, assetId, price, paymentMethod);
         sendMessage(channelId, content);
     }
 
@@ -82,7 +82,6 @@ public class DiscordNotificationService {
 
     public void revokeDiscordBan(String discordId) {
         if (botToken == null || guildId == null || botToken.isBlank() || guildId.isBlank()) {
-            System.err.println("Discord token or guild ID is missing, cannot revoke ban.");
             return;
         }
 
@@ -94,14 +93,8 @@ public class DiscordNotificationService {
                     .DELETE()
                     .build();
 
-            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                    .thenAccept(response -> {
-                        if (response.statusCode() != 204) {
-                            System.err.println("Failed to revoke ban for user " + discordId + ". Discord returned status: " + response.statusCode());
-                        }
-                    });
-        } catch (Exception e) {
-            e.printStackTrace();
+            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString());
+        } catch (Exception ignored) {
         }
     }
 

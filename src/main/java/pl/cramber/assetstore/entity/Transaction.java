@@ -25,6 +25,13 @@ public class Transaction {
     @Column(nullable = false)
     private Integer amount;
 
+    @Column(name = "amount_usd")
+    private Double amountUsd;
+
+    @Column(name = "currency", nullable = false)
+    @Builder.Default
+    private String currency = "ROBUX";
+
     @Column(name = "transaction_type", nullable = false)
     private String type;
 

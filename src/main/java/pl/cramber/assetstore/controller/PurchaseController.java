@@ -46,6 +46,27 @@ public class PurchaseController {
         return ResponseEntity.ok(Map.of("status", "SUCCESS"));
     }
 
+    @PostMapping("/{assetId}/paypal/create")
+    public ResponseEntity<?> createPaypalOrder(
+            @AuthenticationPrincipal OAuth2User principal,
+            @PathVariable UUID assetId,
+            @RequestParam(required = false) String promoCode) {
+        User user = userRepository.findByDiscordId(principal.getAttribute("id")).orElseThrow();
+        Map<String, String> result = purchaseService.createPaypalOrder(user.getId(), assetId, promoCode);
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/{assetId}/paypal/capture")
+    public ResponseEntity<?> capturePaypalOrder(
+            @AuthenticationPrincipal OAuth2User principal,
+            @PathVariable UUID assetId,
+            @RequestBody Map<String, String> payload) {
+        User user = userRepository.findByDiscordId(principal.getAttribute("id")).orElseThrow();
+        String paypalOrderId = payload.get("paypalOrderId");
+        String result = purchaseService.capturePaypalOrder(user.getId(), assetId, paypalOrderId);
+        return ResponseEntity.ok(Map.of("status", result));
+    }
+
     @PostMapping("/{assetId}/download")
     public ResponseEntity<?> downloadAsset(
             @AuthenticationPrincipal OAuth2User principal,

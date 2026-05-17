@@ -10,6 +10,9 @@ public class AssetRequest {
     private String title;
     private String description;
     private Integer price;
+    private Boolean paypalEnabled;
+    private Double priceUsd;
+    private String paypalEnvKey;
     private String visibility;
     private String deliveryType;
     private String r2FileKey;

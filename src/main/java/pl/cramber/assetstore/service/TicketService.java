@@ -20,6 +20,7 @@ public class TicketService {
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
     private final DiscordNotificationService discordNotificationService;
+    private final PayPalService payPalService;
 
     @Transactional
     public TicketMessage sendMessage(Ticket ticket, User sender, String content) {
@@ -34,35 +35,43 @@ public class TicketService {
     @Transactional
     public Order approveTicket(Ticket ticket) {
         ticket.setStatus("CLOSED");
-
         Order order = ticket.getOrder();
         order.setStatus("COMPLETED");
-
         ticketRepository.save(ticket);
         orderRepository.save(order);
-
         discordNotificationService.sendOrderCompleteDM(order.getUser().getDiscordId(), order.getAsset().getTitle());
-
         return order;
     }
 
     @Transactional
     public Order rejectTicket(Ticket ticket) {
         ticket.setStatus("CLOSED");
-
         Order order = ticket.getOrder();
         order.setStatus("CANCELLED");
 
-        User buyer = order.getUser();
-        int refundAmount = order.getAsset().getPrice();
-        buyer.setBalance(buyer.getBalance() + refundAmount);
-        userRepository.save(buyer);
+        if ("ROBUX".equals(order.getPaymentMethod())) {
+            User buyer = order.getUser();
+            int refundAmount = order.getPurchasePrice();
+            buyer.setBalance(buyer.getBalance() + refundAmount);
+            userRepository.save(buyer);
 
-        transactionRepository.save(Transaction.builder()
-                .user(buyer)
-                .amount(refundAmount)
-                .type("REFUND")
-                .build());
+            transactionRepository.save(Transaction.builder()
+                    .user(buyer)
+                    .amount(refundAmount)
+                    .type("REFUND")
+                    .currency("ROBUX")
+                    .build());
+        } else if ("PAYPAL".equals(order.getPaymentMethod()) && order.getPaypalCaptureId() != null) {
+            payPalService.refundCapture(order.getAsset().getPaypalEnvKey(), order.getPaypalCaptureId());
+
+            transactionRepository.save(Transaction.builder()
+                    .user(order.getUser())
+                    .amount(0)
+                    .amountUsd(order.getPurchasePriceUsd())
+                    .type("REFUND_PAYPAL")
+                    .currency("USD")
+                    .build());
+        }
 
         ticketRepository.save(ticket);
         return orderRepository.save(order);

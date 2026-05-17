@@ -6,7 +6,10 @@ import java.util.UUID;
 public class AssetSummaryDto {
     public final UUID id;
     public final String title;
-    public final Object price;
+    public final Integer price;
+    public final Double priceUsd;
+    public final Boolean paypalEnabled;
+    public final String paypalClientId;
     public final Object category;
     public final Object tags;
     public final String thumbnailUrl;
@@ -14,10 +17,13 @@ public class AssetSummaryDto {
     public final Double averageRating;
     public final Integer ratingCount;
 
-    public AssetSummaryDto(Asset asset) {
+    public AssetSummaryDto(Asset asset, String paypalClientId) {
         this.id = asset.getId();
         this.title = asset.getTitle();
         this.price = asset.getPrice();
+        this.priceUsd = asset.getPriceUsd();
+        this.paypalEnabled = asset.getPaypalEnabled();
+        this.paypalClientId = paypalClientId;
         this.category = asset.getCategory();
         this.tags = asset.getTags();
         this.thumbnailUrl = asset.getThumbnailUrl();

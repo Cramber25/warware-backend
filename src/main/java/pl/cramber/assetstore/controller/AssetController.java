@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import pl.cramber.assetstore.dto.AssetSummaryDto;
 import pl.cramber.assetstore.entity.Asset;
 import pl.cramber.assetstore.repository.AssetRepository;
+import pl.cramber.assetstore.service.PayPalService;
 
 import java.util.List;
 import java.util.UUID;
@@ -23,6 +24,7 @@ import java.util.UUID;
 public class AssetController {
 
     private final AssetRepository assetRepository;
+    private final PayPalService payPalService;
 
     @GetMapping
     public Page<AssetSummaryDto> getPublicAssets(
@@ -52,12 +54,12 @@ public class AssetController {
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, validSortBy));
 
         return assetRepository.findPublicAssetsWithFilters(validSearch, categoryId, validTagIds, validCollectionIds, pageable)
-                .map(AssetSummaryDto::new);
+                .map(asset -> new AssetSummaryDto(asset, payPalService.getClientIdForEnv(asset.getPaypalEnvKey())));
     }
 
     @GetMapping("/{id}")
     @Transactional
-    public ResponseEntity<Asset> getAssetById(@PathVariable UUID id) {
+    public ResponseEntity<AssetSummaryDto> getAssetById(@PathVariable UUID id) {
         return assetRepository.findById(id)
                 .filter(asset -> !asset.getVisibility().equals("PRIVATE") && !asset.getVisibility().equals("ARCHIVED"))
                 .map(asset -> {
@@ -72,7 +74,7 @@ public class AssetController {
                         asset.getCollections().size();
                     }
 
-                    return ResponseEntity.ok(asset);
+                    return ResponseEntity.ok(new AssetSummaryDto(asset, payPalService.getClientIdForEnv(asset.getPaypalEnvKey())));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
