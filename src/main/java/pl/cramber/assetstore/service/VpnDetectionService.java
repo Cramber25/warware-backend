@@ -22,7 +22,7 @@ public class VpnDetectionService {
     private final RestTemplate restTemplate = new RestTemplate();
     private final IpCheckRepository ipCheckRepository;
 
-    @Value("${vpnapi.key}")
+    @Value("${ipgeolocation.key}")
     private String apiKey;
 
     public boolean isVpnOrProxy(String ipAddress) {
@@ -40,7 +40,7 @@ public class VpnDetectionService {
         }
 
         try {
-            String url = String.format("https://vpnapi.io/api/%s?key=%s", ipAddress, apiKey);
+            String url = String.format("https://api.ipgeolocation.io/v3/security?apiKey=%s&ip=%s", apiKey, ipAddress);
             VpnApiResponse response = restTemplate.getForObject(url, VpnApiResponse.class);
 
             if (response != null && response.getSecurity() != null) {
@@ -49,7 +49,7 @@ public class VpnDetectionService {
                 return isSuspicious;
             }
         } catch (Exception e) {
-            log.error("VpnApi error for IP: {}", ipAddress, e);
+            log.error("IPGeolocation API error for IP: {}", ipAddress, e);
         }
 
         return false;
