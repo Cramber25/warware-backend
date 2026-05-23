@@ -94,16 +94,6 @@
             <artifactId>JDA</artifactId>
             <version>6.4.1</version>
         </dependency>
-        <dependency>
-            <groupId>com.sksamuel.scrimage</groupId>
-            <artifactId>scrimage-core</artifactId>
-            <version>4.5.4</version>
-        </dependency>
-        <dependency>
-            <groupId>com.sksamuel.scrimage</groupId>
-            <artifactId>scrimage-webp</artifactId>
-            <version>4.5.4</version>
-        </dependency>
     </dependencies>
 
     <build>
