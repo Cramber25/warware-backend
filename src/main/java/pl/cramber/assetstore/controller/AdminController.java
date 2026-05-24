@@ -33,9 +33,8 @@ public class AdminController {
     }
 
     @PostMapping("/upload")
-    public ResponseEntity<String> uploadFile(@RequestParam("file") MultipartFile file, @AuthenticationPrincipal OAuth2User principal) throws IOException {
-        User admin = userRepository.findByDiscordId(principal.getAttribute("id")).orElseThrow();
-        String fileKey = r2Service.uploadFile(file, admin.getId());
+    public ResponseEntity<String> uploadFile(@RequestParam("file") MultipartFile file) throws IOException {
+        String fileKey = r2Service.uploadFile(file);
         return ResponseEntity.ok(fileKey);
     }
 }

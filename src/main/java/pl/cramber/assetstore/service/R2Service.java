@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
@@ -14,9 +15,11 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
@@ -38,7 +41,7 @@ public class R2Service {
     @Value("${cloud.r2.public-url}")
     private String publicUrl;
 
-    public String uploadFile(MultipartFile file, UUID uploaderId) throws IOException {
+    public String uploadFile(MultipartFile file) throws IOException {
         String originalFilename = file.getOriginalFilename();
 
         if (originalFilename == null || (!originalFilename.endsWith(".rbxm") && !originalFilename.endsWith(".zip"))) {
@@ -46,7 +49,7 @@ public class R2Service {
         }
 
         String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-        String fileKey = "assets/" + uploaderId.toString() + "/" + UUID.randomUUID() + extension;
+        String fileKey = "tmp/" + UUID.randomUUID() + extension;
 
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                 .bucket(privateBucketName)
@@ -59,9 +62,30 @@ public class R2Service {
         return fileKey;
     }
 
+    public void movePrivateFile(String oldKey, String newKey) {
+        String encodedSourceKey = URLEncoder.encode(privateBucketName + "/" + oldKey, StandardCharsets.UTF_8)
+                .replace("+", "%20")
+                .replace("%2F", "/");
+
+        CopyObjectRequest copyReq = CopyObjectRequest.builder()
+                .copySource(encodedSourceKey)
+                .destinationBucket(privateBucketName)
+                .destinationKey(newKey)
+                .build();
+        s3Client.copyObject(copyReq);
+
+        DeleteObjectRequest deleteReq = DeleteObjectRequest.builder()
+                .bucket(privateBucketName)
+                .key(oldKey)
+                .build();
+        s3Client.deleteObject(deleteReq);
+    }
+
     public void deleteFile(String fileKey) {
-        String targetBucket = fileKey.startsWith("images/") || fileKey.startsWith("assets/") || fileKey.startsWith("avatars/")
-                ? publicBucketName : privateBucketName;
+        boolean isPublic = fileKey.startsWith("images/") || fileKey.startsWith("avatars/")
+                || (fileKey.startsWith("assets/") && (fileKey.endsWith(".webp") || fileKey.endsWith(".png") || fileKey.endsWith(".jpg") || fileKey.endsWith(".jpeg")));
+
+        String targetBucket = isPublic ? publicBucketName : privateBucketName;
 
         DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
                 .bucket(targetBucket)
@@ -143,7 +167,7 @@ public class R2Service {
     }
 
     private String getFileExtension(String filename) {
-        if (filename == null || !filename.contains(".")) return "jpeg";
+        if (filename == null || !filename.contains(".")) return "webp";
         return filename.substring(filename.lastIndexOf(".") + 1);
     }
 

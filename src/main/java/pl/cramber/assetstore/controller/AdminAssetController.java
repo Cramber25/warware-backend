@@ -101,7 +101,7 @@ public class AdminAssetController {
         User creator = userRepository.findByDiscordId(principal.getAttribute("id")).orElseThrow();
         String role = principal.getAuthorities().toString();
 
-        if (!role.contains("ROLE_SUPERADMIN") && !request.getR2FileKey().startsWith("assets/" + creator.getId() + "/")) {
+        if (!role.contains("ROLE_SUPERADMIN") && !request.getR2FileKey().startsWith("tmp/")) {
             return ResponseEntity.status(403).build();
         }
 
@@ -123,6 +123,19 @@ public class AdminAssetController {
 
         applyRelations(asset, request);
         Asset savedAsset = assetRepository.save(asset);
+
+        String currentKey = savedAsset.getR2FileKey();
+        if (currentKey != null && currentKey.startsWith("tmp/")) {
+            String extension = currentKey.contains(".") ? currentKey.substring(currentKey.lastIndexOf(".")) : "";
+            String expectedKey = "assets/" + savedAsset.getId() + extension;
+
+            try {
+                r2Service.movePrivateFile(currentKey, expectedKey);
+                savedAsset.setR2FileKey(expectedKey);
+                savedAsset = assetRepository.save(savedAsset);
+            } catch (Exception e) {
+            }
+        }
 
         logAction(principal, "CREATE_ASSET", "Created asset: " + savedAsset.getTitle());
         return ResponseEntity.ok(savedAsset);
@@ -159,12 +172,25 @@ public class AdminAssetController {
         }
 
         if (request.getR2FileKey() != null && !request.getR2FileKey().isEmpty() && !request.getR2FileKey().equals(asset.getR2FileKey())) {
-            if (!role.contains("ROLE_SUPERADMIN") && !request.getR2FileKey().startsWith("assets/" + admin.getId() + "/")) {
+            if (!role.contains("ROLE_SUPERADMIN") && !request.getR2FileKey().startsWith("tmp/")) {
                 return ResponseEntity.status(403).build();
             }
+
             String oldFileKey = asset.getR2FileKey();
-            asset.setR2FileKey(request.getR2FileKey());
-            try { r2Service.deleteFile(oldFileKey); } catch (Exception ignored) {}
+            String currentKey = request.getR2FileKey();
+            String extension = currentKey.contains(".") ? currentKey.substring(currentKey.lastIndexOf(".")) : "";
+            String expectedKey = "assets/" + asset.getId() + extension;
+
+            try {
+                r2Service.movePrivateFile(currentKey, expectedKey);
+                asset.setR2FileKey(expectedKey);
+
+                if (oldFileKey != null && !oldFileKey.equals(expectedKey)) {
+                    try { r2Service.deleteFile(oldFileKey); } catch (Exception ignored) {}
+                }
+            } catch (Exception e) {
+                asset.setR2FileKey(currentKey);
+            }
         }
 
         applyRelations(asset, request);
