@@ -132,7 +132,8 @@ public class RobloxLinkController {
                 }
             }
 
-            String finalRobloxAvatarUrl = r2Service.uploadAvatarFromUrl(robloxAvatarUrl.replace("Png", "Webp"), "roblox", robloxId);
+            String finalRobloxAvatarUrl = r2Service.uploadAvatarFromUrl(robloxAvatarUrl.replaceAll("(.*/)Png(/noFilter.*)$", "$1Webp$2"), "roblox", robloxId);
+
 
             user.setRobloxId(robloxId);
             user.setRobloxUsername(robloxUsername);
